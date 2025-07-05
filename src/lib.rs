@@ -14,6 +14,21 @@
 //! - **Async/Sync Support**: Compatible with both blocking and async I2C implementations
 //! - **Optional defmt logging support**
 //!
+//! ## Installation
+//!
+//! Add this to your `Cargo.toml`:
+//!
+//! ```toml
+//! [dependencies]
+//! sw2303 = "0.1.0"
+//! # For async support
+//! sw2303 = { version = "0.1.0", features = ["async"] }
+//! # For defmt logging support
+//! sw2303 = { version = "0.1.0", features = ["defmt"] }
+//! # For both async and defmt
+//! sw2303 = { version = "0.1.0", features = ["async", "defmt"] }
+//! ```
+//!
 //! ## Usage
 //!
 //! ### Synchronous Version
