@@ -1,15 +1,15 @@
 //! SW2303 driver implementation using maybe-async-cfg
-//! 
+//!
 //! SW2303 is a USB PD (Power Delivery) charging controller, not a USB hub controller.
 //! This driver provides methods to interact with the SW2303 for UFP detection and charging management.
 
 use crate::error::Error;
-use crate::registers::{Register, SystemStatus0Flags, SystemStatus1Flags, SystemStatus2Flags,
-                      SystemStatus3Flags, SystemStatus4Flags, SystemStatus5Flags,
-                      FastChargingFlags, PdStatusFlags, TypeCStatusFlags,
-                      InterruptStatus0Flags, InterruptStatus1Flags,
-                      ResetControlFlags, PdConfigFlags, TypeCConfigFlags, GpioConfigFlags,
-                      constants};
+use crate::registers::{
+    FastChargingFlags, GpioConfigFlags, InterruptStatus0Flags, InterruptStatus1Flags,
+    PdConfigFlags, PdStatusFlags, Register, ResetControlFlags, SystemStatus0Flags,
+    SystemStatus1Flags, SystemStatus2Flags, SystemStatus3Flags, SystemStatus4Flags,
+    SystemStatus5Flags, TypeCConfigFlags, TypeCStatusFlags, constants,
+};
 
 #[cfg(not(feature = "async"))]
 use embedded_hal::i2c::I2c;
@@ -97,7 +97,11 @@ where
     /// # Returns
     ///
     /// Returns `Ok(())` on success, or an `Error` if the operation fails.
-    pub async fn write_register(&mut self, register: Register, value: u8) -> Result<(), Error<I2C::Error>> {
+    pub async fn write_register(
+        &mut self,
+        register: Register,
+        value: u8,
+    ) -> Result<(), Error<I2C::Error>> {
         self.i2c
             .write(self.address, &[register.addr(), value])
             .await
@@ -118,12 +122,20 @@ where
         let version_bits = chip_version & 0x03; // Extract bits [1:0]
 
         #[cfg(feature = "defmt")]
-        defmt::info!("SW2303 chip version: 0x{:02X} (version bits: {})", chip_version, version_bits);
+        defmt::info!(
+            "SW2303 chip version: 0x{:02X} (version bits: {})",
+            chip_version,
+            version_bits
+        );
 
         // Check if chip version matches expected value (default 0x1)
         if version_bits != constants::CHIP_VERSION {
             #[cfg(feature = "defmt")]
-            defmt::warn!("Unexpected chip version: expected {}, got {}", constants::CHIP_VERSION, version_bits);
+            defmt::warn!(
+                "Unexpected chip version: expected {}, got {}",
+                constants::CHIP_VERSION,
+                version_bits
+            );
             // Don't fail initialization, just warn - hardware might be different variant
         }
 
@@ -184,8 +196,10 @@ where
         let voltage_high = (voltage_units >> 8) as u8;
         let voltage_low = (voltage_units & 0x0F) as u8;
 
-        self.write_register(Register::VoltageHigh, voltage_high).await?;
-        self.write_register(Register::VoltageLow, voltage_low).await?;
+        self.write_register(Register::VoltageHigh, voltage_high)
+            .await?;
+        self.write_register(Register::VoltageLow, voltage_low)
+            .await?;
 
         Ok(())
     }
@@ -202,7 +216,8 @@ where
     pub async fn set_current_limit(&mut self, current_ma: u16) -> Result<(), Error<I2C::Error>> {
         // Convert current from mA to register value (assuming 50mA per unit)
         let current_units = (current_ma / 50) as u8;
-        self.write_register(Register::CurrentLimit, current_units).await?;
+        self.write_register(Register::CurrentLimit, current_units)
+            .await?;
 
         Ok(())
     }
@@ -272,7 +287,9 @@ where
     /// # Returns
     ///
     /// Returns `Ok(FastChargingFlags)` on success, or an `Error` if the operation fails.
-    pub async fn get_fast_charging_status(&mut self) -> Result<FastChargingFlags, Error<I2C::Error>> {
+    pub async fn get_fast_charging_status(
+        &mut self,
+    ) -> Result<FastChargingFlags, Error<I2C::Error>> {
         let status = self.read_register(Register::FastChargingStatus).await?;
         Ok(FastChargingFlags::from_bits_truncate(status))
     }
@@ -337,7 +354,8 @@ where
         // Configure for register mode (bit 7 = 1) with specified power
         let config_value = constants::power::POWER_CONFIG_REGISTER_MODE | power_setting;
 
-        self.write_register(Register::PowerConfig, config_value).await?;
+        self.write_register(Register::PowerConfig, config_value)
+            .await?;
 
         Ok(())
     }
@@ -406,8 +424,8 @@ where
     /// Returns `Ok(true)` if Type-C connection is detected, `Ok(false)` otherwise.
     pub async fn is_type_c_connected(&mut self) -> Result<bool, Error<I2C::Error>> {
         let type_c_status = self.get_type_c_status().await?;
-        Ok(type_c_status.contains(TypeCStatusFlags::CC1_CONNECTED) ||
-           type_c_status.contains(TypeCStatusFlags::CC2_CONNECTED))
+        Ok(type_c_status.contains(TypeCStatusFlags::CC1_CONNECTED)
+            || type_c_status.contains(TypeCStatusFlags::CC2_CONNECTED))
     }
 
     /// Check if charging is active.
@@ -465,7 +483,9 @@ where
     /// # Returns
     ///
     /// Returns `Ok(InterruptStatus0Flags)` with the current interrupt status 0 flags.
-    pub async fn get_interrupt_status_0(&mut self) -> Result<InterruptStatus0Flags, Error<I2C::Error>> {
+    pub async fn get_interrupt_status_0(
+        &mut self,
+    ) -> Result<InterruptStatus0Flags, Error<I2C::Error>> {
         let status = self.read_register(Register::InterruptStatus0).await?;
         Ok(InterruptStatus0Flags::from_bits_truncate(status))
     }
@@ -475,7 +495,9 @@ where
     /// # Returns
     ///
     /// Returns `Ok(InterruptStatus1Flags)` with the current interrupt status 1 flags.
-    pub async fn get_interrupt_status_1(&mut self) -> Result<InterruptStatus1Flags, Error<I2C::Error>> {
+    pub async fn get_interrupt_status_1(
+        &mut self,
+    ) -> Result<InterruptStatus1Flags, Error<I2C::Error>> {
         let status = self.read_register(Register::InterruptStatus1).await?;
         Ok(InterruptStatus1Flags::from_bits_truncate(status))
     }
@@ -517,13 +539,13 @@ where
     /// Returns `Ok(true)` if any protection is triggered, `Ok(false)` otherwise.
     pub async fn is_protection_active(&mut self) -> Result<bool, Error<I2C::Error>> {
         let status4 = self.get_system_status_4().await?;
-        Ok(status4.contains(SystemStatus4Flags::INPUT_OVERVOLTAGE) ||
-           status4.contains(SystemStatus4Flags::INPUT_UNDERVOLTAGE) ||
-           status4.contains(SystemStatus4Flags::OUTPUT_OVERVOLTAGE) ||
-           status4.contains(SystemStatus4Flags::OUTPUT_UNDERVOLTAGE) ||
-           status4.contains(SystemStatus4Flags::SHORT_CIRCUIT) ||
-           status4.contains(SystemStatus4Flags::REVERSE_CURRENT) ||
-           status4.contains(SystemStatus4Flags::TEMPERATURE_SHUTDOWN))
+        Ok(status4.contains(SystemStatus4Flags::INPUT_OVERVOLTAGE)
+            || status4.contains(SystemStatus4Flags::INPUT_UNDERVOLTAGE)
+            || status4.contains(SystemStatus4Flags::OUTPUT_OVERVOLTAGE)
+            || status4.contains(SystemStatus4Flags::OUTPUT_UNDERVOLTAGE)
+            || status4.contains(SystemStatus4Flags::SHORT_CIRCUIT)
+            || status4.contains(SystemStatus4Flags::REVERSE_CURRENT)
+            || status4.contains(SystemStatus4Flags::TEMPERATURE_SHUTDOWN))
     }
 
     /// Perform system reset.
@@ -532,7 +554,11 @@ where
     ///
     /// Returns `Ok(())` on success, or an `Error` if the operation fails.
     pub async fn system_reset(&mut self) -> Result<(), Error<I2C::Error>> {
-        self.write_register(Register::ResetControl, ResetControlFlags::SYSTEM_RESET.bits()).await?;
+        self.write_register(
+            Register::ResetControl,
+            ResetControlFlags::SYSTEM_RESET.bits(),
+        )
+        .await?;
         Ok(())
     }
 
@@ -542,7 +568,8 @@ where
     ///
     /// Returns `Ok(())` on success, or an `Error` if the operation fails.
     pub async fn soft_reset(&mut self) -> Result<(), Error<I2C::Error>> {
-        self.write_register(Register::ResetControl, ResetControlFlags::SOFT_RESET.bits()).await?;
+        self.write_register(Register::ResetControl, ResetControlFlags::SOFT_RESET.bits())
+            .await?;
         Ok(())
     }
 
@@ -556,7 +583,8 @@ where
     ///
     /// Returns `Ok(())` on success, or an `Error` if the operation fails.
     pub async fn configure_pd(&mut self, config: PdConfigFlags) -> Result<(), Error<I2C::Error>> {
-        self.write_register(Register::PdConfig, config.bits()).await?;
+        self.write_register(Register::PdConfig, config.bits())
+            .await?;
         Ok(())
     }
 
@@ -569,8 +597,12 @@ where
     /// # Returns
     ///
     /// Returns `Ok(())` on success, or an `Error` if the operation fails.
-    pub async fn configure_type_c(&mut self, config: TypeCConfigFlags) -> Result<(), Error<I2C::Error>> {
-        self.write_register(Register::TypeCConfig, config.bits()).await?;
+    pub async fn configure_type_c(
+        &mut self,
+        config: TypeCConfigFlags,
+    ) -> Result<(), Error<I2C::Error>> {
+        self.write_register(Register::TypeCConfig, config.bits())
+            .await?;
         Ok(())
     }
 
@@ -583,8 +615,12 @@ where
     /// # Returns
     ///
     /// Returns `Ok(())` on success, or an `Error` if the operation fails.
-    pub async fn configure_gpio(&mut self, config: GpioConfigFlags) -> Result<(), Error<I2C::Error>> {
-        self.write_register(Register::GpioConfig, config.bits()).await?;
+    pub async fn configure_gpio(
+        &mut self,
+        config: GpioConfigFlags,
+    ) -> Result<(), Error<I2C::Error>> {
+        self.write_register(Register::GpioConfig, config.bits())
+            .await?;
         Ok(())
     }
 
@@ -671,7 +707,8 @@ where
     ///
     /// Returns `Ok(())` on success, or an `Error` if the operation fails.
     pub async fn configure_watchdog(&mut self, config: u8) -> Result<(), Error<I2C::Error>> {
-        self.write_register(Register::WatchdogConfig, config).await?;
+        self.write_register(Register::WatchdogConfig, config)
+            .await?;
         Ok(())
     }
 

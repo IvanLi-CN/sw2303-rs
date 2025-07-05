@@ -647,7 +647,6 @@ pub mod constants {
         pub const POWER_65W: u8 = 65;
     }
 
-
     /// ADC conversion factors
     pub mod adc {
         /// Vin/Vbus ADC conversion factor: 7.5mV per bit (12-bit mode)

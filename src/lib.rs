@@ -78,9 +78,9 @@
 //! - `defmt`: Enable defmt logging support
 
 mod data_types;
+pub mod driver;
 pub mod error;
 pub mod registers;
-pub mod driver;
 
 use crate::error::Error;
 pub use data_types::*;

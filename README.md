@@ -86,6 +86,7 @@ where I2C::Error: core::fmt::Debug
     }
 
     // Configure PD protocol
+    use sw2303::registers::{PdConfigFlags, TypeCConfigFlags};
     let pd_config = PdConfigFlags::PD_ENABLE | PdConfigFlags::SINK_MODE;
     sw2303.configure_pd(pd_config)?;
 
@@ -99,6 +100,8 @@ where I2C::Error: core::fmt::Debug
 ### Async Usage
 
 ```rust
+# #[cfg(feature = "async")]
+# {
 use sw2303::{SW2303, registers::constants::DEFAULT_ADDRESS};
 use embedded_hal_async::i2c::I2c;
 
@@ -118,6 +121,7 @@ where I2C::Error: core::fmt::Debug
 
     Ok(())
 }
+# }
 ```
 
 ## Feature Flags
