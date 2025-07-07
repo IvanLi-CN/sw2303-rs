@@ -31,8 +31,7 @@ pub enum Register {
     SystemStatus1 = 0x08,
     /// REG 0x09: PD status
     PdStatus = 0x09,
-    /// REG 0x0A: Type-C status
-    TypeCStatus = 0x0A,
+
     /// REG 0x0B: System status 4
     SystemStatus4 = 0x0B,
     /// REG 0x0C: System status 5
@@ -430,27 +429,7 @@ impl defmt::Format for PdStatusFlags {
     }
 }
 
-bitflags! {
-    /// Type-C status flags (REG 0x0A)
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub struct TypeCStatusFlags: u8 {
-        /// CC1 connection detected (bit 7)
-        const CC1_CONNECTED = 0b10000000;
-        /// CC2 connection detected (bit 6)
-        const CC2_CONNECTED = 0b01000000;
-        /// VCONN enabled (bit 5)
-        const VCONN_ENABLED = 0b00100000;
-        /// Data role (bit 4): 0=UFP, 1=DFP
-        const DATA_ROLE_DFP = 0b00010000;
-    }
-}
 
-#[cfg(feature = "defmt")]
-impl defmt::Format for TypeCStatusFlags {
-    fn format(&self, fmt: defmt::Formatter) {
-        defmt::write!(fmt, "TypeCStatusFlags({})", self.bits())
-    }
-}
 
 bitflags! {
     /// System status 3 flags (REG 0x0D)

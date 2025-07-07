@@ -8,7 +8,7 @@ use crate::registers::{
     FastChargingFlags, GpioConfigFlags, InterruptStatus0Flags, InterruptStatus1Flags,
     PdConfigFlags, PdStatusFlags, Register, ResetControlFlags, SystemStatus0Flags,
     SystemStatus1Flags, SystemStatus2Flags, SystemStatus3Flags, SystemStatus4Flags,
-    SystemStatus5Flags, TypeCConfigFlags, TypeCStatusFlags, constants,
+    SystemStatus5Flags, TypeCConfigFlags, constants,
 };
 
 #[cfg(not(feature = "async"))]
@@ -387,15 +387,7 @@ where
         Ok(PdStatusFlags::from_bits_truncate(status))
     }
 
-    /// Read Type-C status flags from REG 0x0A.
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(TypeCStatusFlags)` with the current Type-C status flags.
-    pub async fn get_type_c_status(&mut self) -> Result<TypeCStatusFlags, Error<I2C::Error>> {
-        let status = self.read_register(Register::TypeCStatus).await?;
-        Ok(TypeCStatusFlags::from_bits_truncate(status))
-    }
+
 
     /// Read system status 1 flags from REG 0x08.
     ///
@@ -414,19 +406,85 @@ where
     /// Returns `Ok(true)` if PD contract is established, `Ok(false)` otherwise.
     pub async fn is_pd_contract_established(&mut self) -> Result<bool, Error<I2C::Error>> {
         let pd_status = self.get_pd_status().await?;
-        Ok(pd_status.contains(PdStatusFlags::CONTRACT_ESTABLISHED))
+        let contract_established = pd_status.contains(PdStatusFlags::CONTRACT_ESTABLISHED);
+        #[cfg(feature = "defmt")]
+        defmt::info!("SW2303 PD status: 0x{:02X}, CONTRACT_ESTABLISHED: {}", pd_status.bits(), contract_established);
+        Ok(contract_established)
     }
 
-    /// Check if Type-C connection is detected on CC1 or CC2.
+    /// Read Request Data Object (RDO) from REG 0x25-0x28.
+    ///
+    /// This method reads the 4-byte Request Data Object that contains the actual
+    /// negotiated power parameters from the PD protocol.
     ///
     /// # Returns
     ///
-    /// Returns `Ok(true)` if Type-C connection is detected, `Ok(false)` otherwise.
-    pub async fn is_type_c_connected(&mut self) -> Result<bool, Error<I2C::Error>> {
-        let type_c_status = self.get_type_c_status().await?;
-        Ok(type_c_status.contains(TypeCStatusFlags::CC1_CONNECTED)
-            || type_c_status.contains(TypeCStatusFlags::CC2_CONNECTED))
+    /// Returns `Ok([u8; 4])` with the 4-byte RDO data, or an `Error` if the operation fails.
+    /// The bytes are returned in order: [RDO0, RDO1, RDO2, RDO3]
+    pub async fn read_request_data_object(&mut self) -> Result<[u8; 4], Error<I2C::Error>> {
+        let rdo0 = self.read_register(Register::RequestDo0).await?;
+        let rdo1 = self.read_register(Register::RequestDo1).await?;
+        let rdo2 = self.read_register(Register::RequestDo2).await?;
+        let rdo3 = self.read_register(Register::RequestDo3).await?;
+
+        Ok([rdo0, rdo1, rdo2, rdo3])
     }
+
+    /// Get the actual negotiated power from the Request Data Object.
+    ///
+    /// This method reads the RDO and extracts the negotiated power value.
+    /// It only returns a valid power value if a PD contract is established.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(u16)` with the negotiated power in watts, or 0 if no PD contract.
+    /// Returns an `Error` if the operation fails.
+    pub async fn get_negotiated_power(&mut self) -> Result<u16, Error<I2C::Error>> {
+        // First check if PD contract is established
+        let contract_established = self.is_pd_contract_established().await?;
+        #[cfg(feature = "defmt")]
+        defmt::info!("SW2303 PD contract established: {}", contract_established);
+
+        if !contract_established {
+            #[cfg(feature = "defmt")]
+            defmt::info!("SW2303 no PD contract, returning 0W");
+            return Ok(0); // No PD contract, return 0W
+        }
+
+        // Read the Request Data Object
+        let rdo = self.read_request_data_object().await?;
+        #[cfg(feature = "defmt")]
+        defmt::info!("SW2303 RDO data: [{:02X}, {:02X}, {:02X}, {:02X}]", rdo[0], rdo[1], rdo[2], rdo[3]);
+
+        // Parse RDO according to USB PD specification
+        // RDO format (32-bit): [RDO3][RDO2][RDO1][RDO0]
+        // Operating current: bits 19-10 (10 bits) in 10mA units
+        // Maximum operating current: bits 9-0 (10 bits) in 10mA units
+        let rdo_u32 = ((rdo[3] as u32) << 24) | ((rdo[2] as u32) << 16) | ((rdo[1] as u32) << 8) | (rdo[0] as u32);
+        #[cfg(feature = "defmt")]
+        defmt::info!("SW2303 RDO as u32: 0x{:08X}", rdo_u32);
+
+        // Extract operating current (bits 19-10) in 10mA units
+        let operating_current_10ma = (rdo_u32 >> 10) & 0x3FF;
+        let operating_current_ma = operating_current_10ma * 10;
+        #[cfg(feature = "defmt")]
+        defmt::info!("SW2303 operating current: {}mA ({}x10mA)", operating_current_ma, operating_current_10ma);
+
+        // Get the negotiated voltage from voltage registers
+        let voltage_mv = self.get_voltage().await?;
+        #[cfg(feature = "defmt")]
+        defmt::info!("SW2303 voltage: {}mV", voltage_mv);
+
+        // Calculate power: P = V * I (convert to watts)
+        let power_mw = (voltage_mv as u32 * operating_current_ma) / 1000;
+        let power_w = (power_mw / 1000) as u16;
+        #[cfg(feature = "defmt")]
+        defmt::info!("SW2303 calculated power: {}mW -> {}W", power_mw, power_w);
+
+        Ok(power_w)
+    }
+
+
 
     /// Check if charging is active.
     ///
