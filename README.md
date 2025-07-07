@@ -61,7 +61,7 @@ where I2C::Error: core::fmt::Debug
     }
 
     // Check Type-C connection
-    if sw2303.is_type_c_connected()? {
+    if sw2303.is_sink_device_connected()? {
         // Type-C device connected
     }
 
