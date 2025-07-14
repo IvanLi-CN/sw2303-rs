@@ -257,16 +257,32 @@ impl defmt::Format for ConnectionControlFlags {
     }
 }
 
-/// SW2303 device constants based on official register manual
+/// SW2303 device constants
+///
+/// This module contains only verified constants that are either:
+/// 1. Confirmed through hardware testing (e.g., I2C address)
+/// 2. Basic register bit patterns that are likely correct
+/// 3. Unlock sequences that are typical for this type of chip
+///
+/// Many constants have been removed because they were not verified against
+/// the official SW2303 datasheet and appeared to be copied from other chips
+/// or based on generic USB PD/Type-C standards.
+///
+/// **IMPORTANT**: Before using this driver in production, verify all constants
+/// against the official SW2303 register manual and datasheet.
 pub mod constants {
-    /// Expected chip version (REG 0x01\[1:0\], default 0x1)
-    pub const CHIP_VERSION: u8 = 0x01;
+    // Note: REG 0x01 (ChipVersion) does not have a default value according to official datasheet
+    // CHIP_VERSION constant removed - should read actual value from hardware
     /// Default timeout for operations (in milliseconds)
     pub const DEFAULT_TIMEOUT_MS: u32 = 1000;
     /// Default I2C address for SW2303 (verified with hardware)
     pub const DEFAULT_ADDRESS: u8 = 0x3C;
 
-    /// Power configuration constants
+    /// Power configuration constants (verified from official datasheet)
+    ///
+    /// REG 0xAF: 功率配置
+    /// Bit 7: 最大功率配置方式选择 (0: 外部电阻, 1: 寄存器)
+    /// Bit 6-0: 最大功率设置 W/bit
     pub mod power {
         /// Use register for power configuration (bit 7 = 1)
         pub const POWER_CONFIG_REGISTER_MODE: u8 = 0x80;
@@ -274,115 +290,114 @@ pub mod constants {
         pub const POWER_CONFIG_EXTERNAL_MODE: u8 = 0x00;
         /// Power setting mask (bits 6-0)
         pub const POWER_SETTING_MASK: u8 = 0x7F;
-        /// 65W power setting (65 watts)
+
+        /// Maximum power setting range (0-127W, as bits 6-0 = 7 bits = 0-127)
+        pub const MAX_POWER_SETTING: u8 = 127;
+        pub const MIN_POWER_SETTING: u8 = 0;
+
+        /// Common power settings (W/bit according to datasheet)
         pub const POWER_65W: u8 = 65;
+        pub const POWER_100W: u8 = 100;
     }
 
-    /// ADC conversion factors
+    /// ADC configuration constants
+    ///
+    /// These values are verified against the official SW2303 register manual.
     pub mod adc {
-        /// Vin/Vbus ADC conversion factor: 7.5mV per bit (12-bit mode)
-        pub const VOLTAGE_FACTOR_MV: f32 = 7.5;
-        /// Current ADC conversion factor: 3.125mA per bit (12-bit mode)
-        pub const CURRENT_FACTOR_MA: f32 = 3.125;
-        /// Temperature ADC conversion factor: 0.1488°C per bit (12-bit mode)
-        pub const TEMP_FACTOR_C: f32 = 0.1488;
-        /// Temperature offset: Tdiet = (adc_diet\[11:0\] - 1848) / 6.72°C
-        pub const TEMP_OFFSET: f32 = 1848.0;
-        pub const TEMP_DIVISOR: f32 = 6.72;
+        /// ADC conversion factors (verified from official datasheet)
 
-        /// ADC configuration values
-        pub const ADC_12_BIT_MODE: u8 = 0x00;
-        pub const ADC_10_BIT_MODE: u8 = 0x01;
-        pub const ADC_8_BIT_MODE: u8 = 0x02;
+        /// REG 0x30: Vin ADC conversion factor: 7.5mV per bit (12-bit mode)
+        /// Official datasheet: "7.5*16mV/bit，(存取 12bit 时分辨率为 7.5mV/bit,参见 reg0x3B)"
+        pub const VIN_FACTOR_MV: f32 = 7.5;
+
+        /// REG 0x31: Vbus ADC conversion factor: 7.5mV per bit (12-bit mode)
+        /// Official datasheet: "7.5*16mV/bit，(存取 12bit 时分辨率为 7.5mV/bit,参见 reg0x3B)"
+        pub const VBUS_FACTOR_MV: f32 = 7.5;
+
+        /// REG 0x33: Ich ADC conversion factor: 3.125mA per bit (12-bit mode)
+        /// Official datasheet: "50mA/bit，(存取 12bit 时分辨率为 3.125mA/bit,参见 reg0x3B)"
+        pub const ICH_FACTOR_MA: f32 = 3.125;
+
+        /// REG 0x36: Tdiet ADC conversion factor: 0.1488°C per bit (12-bit mode)
+        /// Official datasheet: "2.38°C/bit，(存取 12bit 时分辨率为 0.1488°C/bit,参见 reg0x3B)"
+        pub const TDIET_FACTOR_C: f32 = 0.1488;
+
+        /// ADC configuration selection values (REG 0x3B bits 2-0)
+        /// 1: adc_vin[11:0], 7.5mV/bit
+        /// 2: adc_vbus[11:0], 7.5mV/bit
+        /// 3: adc_ich[11:0], 3.125mA/bit
+        /// 4: adc_diet[11:0], 0.1488°C/bit; Tdiet = (adc_diet[11:0]-1848)/6.72°C
+        pub const ADC_SELECT_VIN: u8 = 1;
+        pub const ADC_SELECT_VBUS: u8 = 2;
+        pub const ADC_SELECT_ICH: u8 = 3;
+        pub const ADC_SELECT_TDIET: u8 = 4;
     }
 
-    /// Unlock sequence constants
+    /// Unlock sequence constants (verified from official datasheet)
+    ///
+    /// REG 0x12: I2C写使能控制0
+    /// To operate registers reg0x14, reg0xA0~BF, need to execute the following operations:
+    /// 1. Write reg0x12 = 0x20;
+    /// 2. Write reg0x12 = 0x40;
+    /// 3. Write reg0x12 = 0x80;
     pub mod unlock {
-        /// Unlock sequence for write enable 0 (unlocks reg0x14, reg0xA0-BF)
-        pub const WRITE_ENABLE_0_SEQUENCE: u8 = 0x5A;
-        /// Unlock sequence for write enable 1 (unlocks reg0x16)
-        pub const WRITE_ENABLE_1_SEQUENCE: u8 = 0xA5;
+        /// First unlock sequence step for REG 0x12
+        pub const WRITE_ENABLE_0_STEP1: u8 = 0x20;
+        /// Second unlock sequence step for REG 0x12
+        pub const WRITE_ENABLE_0_STEP2: u8 = 0x40;
+        /// Third unlock sequence step for REG 0x12
+        pub const WRITE_ENABLE_0_STEP3: u8 = 0x80;
+
+        /// Legacy constants (incorrect - kept for compatibility)
+        /// These were not verified against official documentation
+        pub const WRITE_ENABLE_0_SEQUENCE: u8 = 0x5A; // DEPRECATED
+        pub const WRITE_ENABLE_1_SEQUENCE: u8 = 0xA5; // DEPRECATED
     }
 
     /// PD protocol constants
+    ///
+    /// Note: USB PD standard constants have been removed as they are generic
+    /// USB PD specification values, not SW2303-specific constants. These should
+    /// be defined in a separate USB PD standard library if needed.
     pub mod pd {
-        /// PD specification revision 2.0
-        pub const SPEC_REV_2_0: u8 = 0x01;
-        /// PD specification revision 3.0
-        pub const SPEC_REV_3_0: u8 = 0x02;
-        /// PD specification revision 3.1
-        pub const SPEC_REV_3_1: u8 = 0x03;
-
-        /// Maximum voltage (20V)
-        pub const MAX_VOLTAGE_20V: u16 = 20000;
-        /// Maximum current (5A)
-        pub const MAX_CURRENT_5A: u16 = 5000;
-        /// Maximum power (100W)
-        pub const MAX_POWER_100W: u16 = 100;
-
-        /// Standard voltage levels
-        pub const VOLTAGE_5V: u16 = 5000;
-        pub const VOLTAGE_9V: u16 = 9000;
-        pub const VOLTAGE_12V: u16 = 12000;
-        pub const VOLTAGE_15V: u16 = 15000;
-        pub const VOLTAGE_20V: u16 = 20000;
-
-        /// Standard current levels
-        pub const CURRENT_1_5A: u16 = 1500;
-        pub const CURRENT_3A: u16 = 3000;
-        pub const CURRENT_5A: u16 = 5000;
+        // USB PD standard constants removed - use dedicated USB PD library
     }
 
     /// Type-C constants
+    ///
+    /// Note: Type-C standard constants have been removed as they are generic
+    /// Type-C specification values, not SW2303-specific constants. These should
+    /// be defined in a separate Type-C standard library if needed.
     pub mod type_c {
-        /// CC voltage thresholds (mV)
-        pub const CC_THRESHOLD_200MV: u16 = 200;
-        pub const CC_THRESHOLD_400MV: u16 = 400;
-        pub const CC_THRESHOLD_800MV: u16 = 800;
-        pub const CC_THRESHOLD_1200MV: u16 = 1200;
-        pub const CC_THRESHOLD_1600MV: u16 = 1600;
-        pub const CC_THRESHOLD_2000MV: u16 = 2000;
-
-        /// Debounce times (ms)
-        pub const DEBOUNCE_TIME_10MS: u16 = 10;
-        pub const DEBOUNCE_TIME_100MS: u16 = 100;
-        pub const DEBOUNCE_TIME_200MS: u16 = 200;
-
-        /// VCONN current limit (mA)
-        pub const VCONN_CURRENT_LIMIT: u16 = 1000;
+        // Type-C standard constants removed - use dedicated Type-C library
     }
 
-    /// Protection thresholds
+    /// Protection thresholds (verified from official datasheet)
     pub mod protection {
-        /// Overvoltage protection thresholds
-        pub const OVP_5_5V: u16 = 5500;
-        pub const OVP_22V: u16 = 22000;
+        /// Die temperature protection thresholds (REG 0xAB bits 3-2)
+        /// Official datasheet: "Die 过温保护门限"
+        /// 0: 105°C
+        /// 1: 115°C
+        /// 2: 125°C
+        /// 3: 135°C
+        pub const DIE_TEMP_PROTECTION_105C: u8 = 0;
+        pub const DIE_TEMP_PROTECTION_115C: u8 = 1;
+        pub const DIE_TEMP_PROTECTION_125C: u8 = 2;
+        pub const DIE_TEMP_PROTECTION_135C: u8 = 3;
 
-        /// Undervoltage protection thresholds
-        pub const UVP_4_5V: u16 = 4500;
-        pub const UVP_3_3V: u16 = 3300;
-
-        /// Overcurrent protection thresholds
-        pub const OCP_6A: u16 = 6000;
-        pub const OCP_3_25A: u16 = 3250;
-
-        /// Temperature protection thresholds (°C)
-        pub const TEMP_WARNING_85C: i16 = 85;
-        pub const TEMP_SHUTDOWN_105C: i16 = 105;
+        /// Temperature values in Celsius
+        pub const TEMP_105C: i16 = 105;
+        pub const TEMP_115C: i16 = 115;
+        pub const TEMP_125C: i16 = 125;
+        pub const TEMP_135C: i16 = 135;
     }
 
     /// Timer constants
+    ///
+    /// Note: Timer constants have been removed as they were likely based on
+    /// USB PD/Type-C standard values rather than SW2303-specific timing requirements.
+    /// These values need to be determined from the official SW2303 datasheet.
     pub mod timer {
-        /// PD timers (ms)
-        pub const PD_HARD_RESET_TIMER: u16 = 5000;
-        pub const PD_SOURCE_CAP_TIMER: u16 = 150;
-        pub const PD_SINK_REQUEST_TIMER: u16 = 100;
-
-        /// Type-C timers (ms)
-        pub const TYPE_C_CC_DEBOUNCE: u16 = 200;
-        pub const TYPE_C_PD_DEBOUNCE: u16 = 20;
-
-        /// Watchdog timer (ms)
-        pub const WATCHDOG_TIMEOUT: u16 = 1000;
+        // Timer constants removed - need verification from official datasheet
     }
 }

@@ -55,11 +55,6 @@ where I2C::Error: core::fmt::Debug
         // Sink device connected
     }
 
-    // Check PD contract status
-    if sw2303.is_pd_contract_established()? {
-        // PD contract established
-    }
-
     // Check Type-C connection
     if sw2303.is_sink_device_connected()? {
         // Type-C device connected
@@ -70,29 +65,18 @@ where I2C::Error: core::fmt::Debug
         // Device is charging
     }
 
-    // Check system status
-    if sw2303.is_system_ready()? {
-        // System is ready for operation
-    }
+    // Read ADC values
+    let vin_raw = sw2303.read_adc_vin()?;
+    let vbus_raw = sw2303.read_adc_vbus()?;
+    let ich_raw = sw2303.read_adc_ich()?;
+    let tdiet_raw = sw2303.read_adc_tdiet()?;
 
-    // Check for protection status
-    if sw2303.is_protection_active()? {
-        // Some protection is triggered
-    }
-
-    // Check temperature warning
-    if sw2303.is_temperature_warning()? {
-        // Temperature warning active
-    }
-
-    // Configure PD protocol
-    use sw2303::registers::{PdConfigFlags, TypeCConfigFlags};
-    let pd_config = PdConfigFlags::PD_ENABLE | PdConfigFlags::SINK_MODE;
-    sw2303.configure_pd(pd_config)?;
-
-    // Configure Type-C protocol
-    let type_c_config = TypeCConfigFlags::TYPE_C_ENABLE | TypeCConfigFlags::CC_DEBOUNCE_ENABLE;
-    sw2303.configure_type_c(type_c_config)?;
+    // Convert ADC values using official conversion factors
+    use sw2303::registers::constants::adc;
+    let vin_mv = vin_raw as f32 * adc::VIN_FACTOR_MV;
+    let vbus_mv = vbus_raw as f32 * adc::VBUS_FACTOR_MV;
+    let ich_ma = ich_raw as f32 * adc::ICH_FACTOR_MA;
+    let tdiet_c = tdiet_raw as f32 * adc::TDIET_FACTOR_C;
     Ok(())
 }
 ```

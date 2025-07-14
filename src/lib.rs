@@ -44,6 +44,10 @@
 //! let mut sw2303 = SW2303::new(&mut i2c, DEFAULT_ADDRESS);
 //! sw2303.init()?;
 //!
+//! // Configure power (requires unlock for REG 0xAF)
+//! sw2303.unlock_write_enable_0()?;
+//! sw2303.set_power_config(65)?; // Set to 65W
+//!
 //! // Check if a sink device is connected
 //! if sw2303.is_sink_device_connected()? {
 //!     // Sink device connected

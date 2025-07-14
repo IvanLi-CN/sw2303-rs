@@ -126,16 +126,10 @@ where
             version_bits
         );
 
-        // Check if chip version matches expected value (default 0x1)
-        if version_bits != constants::CHIP_VERSION {
-            #[cfg(feature = "defmt")]
-            defmt::warn!(
-                "Unexpected chip version: expected {}, got {}",
-                constants::CHIP_VERSION,
-                version_bits
-            );
-            // Don't fail initialization, just warn - hardware might be different variant
-        }
+        // Note: REG 0x01 does not have a default value according to official datasheet
+        // Just log the detected chip version without validation
+        #[cfg(feature = "defmt")]
+        defmt::info!("SW2303 chip version detected: {}", version_bits);
 
         #[cfg(feature = "defmt")]
         defmt::info!("SW2303 PD controller initialized successfully");
@@ -154,9 +148,10 @@ where
     pub async fn unlock_write_enable_0(&mut self) -> Result<(), Error<I2C::Error>> {
         // Unlock sequence for I2C write enable control 0 (REG 0x12)
         // This enables writing to reg0x14, reg0xA0-BF
-        self.write_register(Register::I2cWriteEnable0, 0x20).await?;
-        self.write_register(Register::I2cWriteEnable0, 0x40).await?;
-        self.write_register(Register::I2cWriteEnable0, 0x80).await?;
+        // Official datasheet sequence: 0x20, 0x40, 0x80
+        self.write_register(Register::I2cWriteEnable0, constants::unlock::WRITE_ENABLE_0_STEP1).await?;
+        self.write_register(Register::I2cWriteEnable0, constants::unlock::WRITE_ENABLE_0_STEP2).await?;
+        self.write_register(Register::I2cWriteEnable0, constants::unlock::WRITE_ENABLE_0_STEP3).await?;
 
         Ok(())
     }
@@ -242,7 +237,8 @@ where
     pub async fn get_current_limit(&mut self) -> Result<u16, Error<I2C::Error>> {
         let current_units = self.read_register(Register::CurrentLimit).await?;
         // Use saturating multiplication to prevent overflow
-        Ok((current_units as u16).saturating_mul(50)) // Convert back to mA
+        // Using 35mA per unit to match set_current_limit conversion
+        Ok((current_units as u16).saturating_mul(35)) // Convert back to mA
     }
 
     /// Check if a sink device is connected (online status).
