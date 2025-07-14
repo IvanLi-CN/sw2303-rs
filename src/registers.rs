@@ -11,199 +11,105 @@ use bitflags::bitflags;
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[repr(u8)]
 pub enum Register {
-    /// REG 0x00: Device ID
-    DeviceId = 0x00,
-    /// REG 0x01: Chip version register
+    /// REG 0x01: 芯片版本 (Chip version register)
     ChipVersion = 0x01,
-    /// REG 0x02: System status 2
-    SystemStatus2 = 0x02,
-    /// REG 0x03: Set voltage high 8 bits
+    /// REG 0x03: 设置电压高8位 (Set voltage high 8 bits)
     VoltageHigh = 0x03,
-    /// REG 0x04: Set voltage low 4 bits
+    /// REG 0x04: 设置电压低4位 (Set voltage low 4 bits)
     VoltageLow = 0x04,
-    /// REG 0x05: Set current limit
+    /// REG 0x05: 设置限流 (Set current limit)
     CurrentLimit = 0x05,
-    /// REG 0x06: Fast charging indication
+    /// REG 0x06: 快充指示 (Fast charging indication)
     FastChargingStatus = 0x06,
-    /// REG 0x07: System status 0
+    /// REG 0x07: 系统状态0 (System status 0)
     SystemStatus0 = 0x07,
-    /// REG 0x08: System status 1
-    SystemStatus1 = 0x08,
-    /// REG 0x09: PD status
-    PdStatus = 0x09,
-
-    /// REG 0x0B: System status 4
-    SystemStatus4 = 0x0B,
-    /// REG 0x0C: System status 5
-    SystemStatus5 = 0x0C,
-    /// REG 0x0D: System status 3
+    /// REG 0x0B: 系统状态1 (System status 1)
+    SystemStatus1 = 0x0B,
+    /// REG 0x0C: 系统状态2 (System status 2)
+    SystemStatus2 = 0x0C,
+    /// REG 0x0D: 系统状态3 (System status 3)
     SystemStatus3 = 0x0D,
-    /// REG 0x0E: Interrupt status 0
-    InterruptStatus0 = 0x0E,
-    /// REG 0x0F: Interrupt status 1
-    InterruptStatus1 = 0x0F,
-    /// REG 0x10: Interrupt mask 0
-    InterruptMask0 = 0x10,
-    /// REG 0x11: Interrupt mask 1
-    InterruptMask1 = 0x11,
-    /// REG 0x12: I2C write enable control 0
-    I2cWriteEnable0 = 0x12,
-    /// REG 0x13: Reset control
-    ResetControl = 0x13,
-    /// REG 0x14: Connection control
-    ConnectionControl = 0x14,
-    /// REG 0x15: I2C write enable control 1
-    I2cWriteEnable1 = 0x15,
-    /// REG 0x16: Force control enable
-    ForceControlEnable = 0x16,
-    /// REG 0x17: PD configuration
-    PdConfig = 0x17,
-    /// REG 0x18: Type-C configuration
-    TypeCConfig = 0x18,
-    /// REG 0x19: CC configuration
-    CcConfig = 0x19,
-    /// REG 0x1A: VCONN configuration
-    VconnConfig = 0x1A,
-    /// REG 0x1B: PD message control
-    PdMessageControl = 0x1B,
-    /// REG 0x1C: PD message status
-    PdMessageStatus = 0x1C,
-    /// REG 0x1D: Source capabilities 0
-    SourceCaps0 = 0x1D,
-    /// REG 0x1E: Source capabilities 1
-    SourceCaps1 = 0x1E,
-    /// REG 0x1F: Source capabilities 2
-    SourceCaps2 = 0x1F,
-    /// REG 0x20: Source capabilities 3
-    SourceCaps3 = 0x20,
-    /// REG 0x21: Sink capabilities 0
-    SinkCaps0 = 0x21,
-    /// REG 0x22: Sink capabilities 1
-    SinkCaps1 = 0x22,
-    /// REG 0x23: Sink capabilities 2
-    SinkCaps2 = 0x23,
-    /// REG 0x24: Sink capabilities 3
-    SinkCaps3 = 0x24,
-    /// REG 0x25: Request data object 0
-    RequestDo0 = 0x25,
-    /// REG 0x26: Request data object 1
-    RequestDo1 = 0x26,
-    /// REG 0x27: Request data object 2
-    RequestDo2 = 0x27,
-    /// REG 0x28: Request data object 3
-    RequestDo3 = 0x28,
-    /// REG 0x29: Timer configuration
-    TimerConfig = 0x29,
-    /// REG 0x2A: Timer status
-    TimerStatus = 0x2A,
-    /// REG 0x2B: Watchdog configuration
-    WatchdogConfig = 0x2B,
-    /// REG 0x2C: GPIO configuration
-    GpioConfig = 0x2C,
-    /// REG 0x2D: GPIO status
-    GpioStatus = 0x2D,
-    /// REG 0x2E: GPIO control
-    GpioControl = 0x2E,
-    /// REG 0x2F: Reserved
-    Reserved2F = 0x2F,
-    /// REG 0x30: ADC Vin data
-    AdcVin = 0x30,
-    /// REG 0x31: ADC Vbus data
-    AdcVbus = 0x31,
-    /// REG 0x32: ADC Vout data
-    AdcVout = 0x32,
-    /// REG 0x33: ADC Ich data
-    AdcIch = 0x33,
-    /// REG 0x34: ADC Iout data
-    AdcIout = 0x34,
-    /// REG 0x35: ADC Vcc data
-    AdcVcc = 0x35,
-    /// REG 0x36: ADC Tdiet data
-    AdcTdiet = 0x36,
-    /// REG 0x37: ADC Tntc data
-    AdcTntc = 0x37,
-    /// REG 0x38: ADC control 0
-    AdcControl0 = 0x38,
-    /// REG 0x39: ADC control 1
-    AdcControl1 = 0x39,
-    /// REG 0x3A: ADC control 2
-    AdcControl2 = 0x3A,
-    /// REG 0x3B: ADC configuration
-    AdcConfig = 0x3B,
-    /// REG 0x3C: ADC data high 8 bits
-    AdcDataHigh = 0x3C,
-    /// REG 0x3D: ADC data low 4 bits
-    AdcDataLow = 0x3D,
-    /// REG 0x3E: ADC calibration 0
-    AdcCalibration0 = 0x3E,
-    /// REG 0x3F: ADC calibration 1
-    AdcCalibration1 = 0x3F,
 
-    // Configuration registers (0xA0-0xBF range, requires unlock)
-    /// REG 0xA0: System configuration 0
-    SystemConfig0 = 0xA0,
-    /// REG 0xA1: System configuration 1
-    SystemConfig1 = 0xA1,
-    /// REG 0xA2: System configuration 2
-    SystemConfig2 = 0xA2,
-    /// REG 0xA3: System configuration 3
-    SystemConfig3 = 0xA3,
-    /// REG 0xA4: PD protocol configuration 0
-    PdProtocolConfig0 = 0xA4,
-    /// REG 0xA5: PD protocol configuration 1
-    PdProtocolConfig1 = 0xA5,
-    /// REG 0xA6: PD protocol configuration 2
-    PdProtocolConfig2 = 0xA6,
-    /// REG 0xA7: Type-C protocol configuration
-    TypeCProtocolConfig = 0xA7,
-    /// REG 0xA8: CC detection configuration
-    CcDetectionConfig = 0xA8,
-    /// REG 0xA9: VCONN control configuration
-    VconnControlConfig = 0xA9,
-    /// REG 0xAA: Power management configuration
-    PowerManagementConfig = 0xAA,
-    /// REG 0xAB: Thermal management configuration
-    ThermalManagementConfig = 0xAB,
-    /// REG 0xAC: Safety configuration
-    SafetyConfig = 0xAC,
-    /// REG 0xAD: Timing configuration 0
-    TimingConfig0 = 0xAD,
-    /// REG 0xAE: Timing configuration 1
-    TimingConfig1 = 0xAE,
-    /// REG 0xAF: Power configuration
+    /// REG 0x12: I2C写使能控制0 (I2C write enable control 0)
+    I2cWriteEnable0 = 0x12,
+    /// REG 0x14: 连接控制 (Connection control)
+    ConnectionControl = 0x14,
+    /// REG 0x15: I2C写使能控制1 (I2C write enable control 1)
+    I2cWriteEnable1 = 0x15,
+    /// REG 0x16: 强制控制使能 (Force control enable)
+    ForceControlEnable = 0x16,
+
+    // ADC registers (0x30-0x3D range)
+    /// REG 0x30: ADC Vin数据 (ADC Vin data)
+    AdcVin = 0x30,
+    /// REG 0x31: ADC Vbus数据 (ADC Vbus data)
+    AdcVbus = 0x31,
+    /// REG 0x33: ADC Ich数据 (ADC Ich data)
+    AdcIch = 0x33,
+    /// REG 0x36: ADC Tdiet数据 (ADC Tdiet data)
+    AdcTdiet = 0x36,
+    /// REG 0x3B: ADC配置 (ADC configuration)
+    AdcConfig = 0x3B,
+    /// REG 0x3C: ADC数据高8位 (ADC data high 8 bits)
+    AdcDataHigh = 0x3C,
+    /// REG 0x3D: ADC数据低4位 (ADC data low 4 bits)
+    AdcDataLow = 0x3D,
+
+    // Configuration registers (0xA1-0xBF range, requires unlock)
+    /// REG 0xA1: 异常处理配置 (Exception handling configuration)
+    ExceptionHandlingConfig = 0xA1,
+    /// REG 0xA3: 输出电压偏移配置 (Output voltage offset configuration)
+    OutputVoltageOffsetConfig = 0xA3,
+    /// REG 0xA4: 线补阻抗配置 (Line compensation impedance configuration)
+    LineCompensationConfig = 0xA4,
+    /// REG 0xA5: 过压检测配置 (Overvoltage detection configuration)
+    OvervoltageDetectionConfig = 0xA5,
+    /// REG 0xA6: PD配置3 (PD configuration 3)
+    PdConfig3 = 0xA6,
+    /// REG 0xA8: 广播电流配置 (Broadcast current configuration)
+    BroadcastCurrentConfig = 0xA8,
+    /// REG 0xAB: 异常保护配置 (Exception protection configuration)
+    ExceptionProtectionConfig = 0xAB,
+    /// REG 0xAC: 在线配置 (Online configuration)
+    OnlineConfig = 0xAC,
+    /// REG 0xAD: 快充配置0 (Fast charging configuration 0)
+    FastChargingConfig0 = 0xAD,
+    /// REG 0xAE: 快充配置1 (Fast charging configuration 1)
+    FastChargingConfig1 = 0xAE,
+    /// REG 0xAF: 功率配置 (Power configuration)
     PowerConfig = 0xAF,
-    /// REG 0xB0: Voltage regulation configuration
-    VoltageRegulationConfig = 0xB0,
-    /// REG 0xB1: Current regulation configuration
-    CurrentRegulationConfig = 0xB1,
-    /// REG 0xB2: Protection configuration 0
-    ProtectionConfig0 = 0xB2,
-    /// REG 0xB3: Protection configuration 1
-    ProtectionConfig1 = 0xB3,
-    /// REG 0xB4: Calibration configuration 0
-    CalibrationConfig0 = 0xB4,
-    /// REG 0xB5: Calibration configuration 1
-    CalibrationConfig1 = 0xB5,
-    /// REG 0xB6: Test configuration 0
-    TestConfig0 = 0xB6,
-    /// REG 0xB7: Test configuration 1
-    TestConfig1 = 0xB7,
-    /// REG 0xB8: Debug configuration 0
-    DebugConfig0 = 0xB8,
-    /// REG 0xB9: Debug configuration 1
-    DebugConfig1 = 0xB9,
-    /// REG 0xBA: Reserved BA
-    ReservedBA = 0xBA,
-    /// REG 0xBB: Reserved BB
-    ReservedBB = 0xBB,
-    /// REG 0xBC: Reserved BC
-    ReservedBC = 0xBC,
-    /// REG 0xBD: Reserved BD
-    ReservedBD = 0xBD,
-    /// REG 0xBE: Reserved BE
-    ReservedBE = 0xBE,
-    /// REG 0xBF: Reserved BF
-    ReservedBF = 0xBF,
+    /// REG 0xB0: 快充配置2 (Fast charging configuration 2)
+    FastChargingConfig2 = 0xB0,
+    /// REG 0xB1: 快充配置3 (Fast charging configuration 3)
+    FastChargingConfig3 = 0xB1,
+    /// REG 0xB2: 快充配置4 (Fast charging configuration 4)
+    FastChargingConfig4 = 0xB2,
+    /// REG 0xB3: PD配置0 (PD configuration 0)
+    PdConfig0 = 0xB3,
+    /// REG 0xB4: PD配置1 (PD configuration 1)
+    PdConfig1 = 0xB4,
+    /// REG 0xB5: PD配置2 (PD configuration 2)
+    PdConfig2 = 0xB5,
+    /// REG 0xB6: VID配置0 (Vendor ID Configuration 0)
+    VidConfig0 = 0xB6,
+    /// REG 0xB7: VID配置1 (Vendor ID Configuration 1)
+    VidConfig1 = 0xB7,
+    /// REG 0xB8: XID配置0 (XID Configuration 0)
+    XidConfig0 = 0xB8,
+    /// REG 0xB9: XID配置1 (XID Configuration 1)
+    XidConfig1 = 0xB9,
+    /// REG 0xBA: XID配置2 (XID Configuration 2)
+    XidConfig2 = 0xBA,
+    /// REG 0xBB: XID配置3 (XID Configuration 3)
+    XidConfig3 = 0xBB,
+    /// REG 0xBC: PID配置0 (Product ID Configuration 0)
+    PidConfig0 = 0xBC,
+    /// REG 0xBD: PID配置1 (Product ID Configuration 1)
+    PidConfig1 = 0xBD,
+    /// REG 0xBE: SVID配置0 (Standard Vendor ID Configuration 0)
+    SvidConfig0 = 0xBE,
+    /// REG 0xBF: SVID配置1 (Standard Vendor ID Configuration 1)
+    SvidConfig1 = 0xBF,
 }
 
 impl Register {
@@ -236,7 +142,7 @@ impl defmt::Format for SystemStatus0Flags {
 }
 
 bitflags! {
-    /// System status 2 flags (REG 0x02)
+    /// System status 2 flags (REG 0x0C)
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct SystemStatus2Flags: u8 {
         /// PD negotiation complete (bit 7)
@@ -265,128 +171,12 @@ impl defmt::Format for SystemStatus2Flags {
     }
 }
 
-bitflags! {
-    /// System status 4 flags (REG 0x0B)
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub struct SystemStatus4Flags: u8 {
-        /// Temperature warning (bit 7)
-        const TEMPERATURE_WARNING = 0b10000000;
-        /// Temperature shutdown (bit 6)
-        const TEMPERATURE_SHUTDOWN = 0b01000000;
-        /// Input undervoltage (bit 5)
-        const INPUT_UNDERVOLTAGE = 0b00100000;
-        /// Input overvoltage (bit 4)
-        const INPUT_OVERVOLTAGE = 0b00010000;
-        /// Output undervoltage (bit 3)
-        const OUTPUT_UNDERVOLTAGE = 0b00001000;
-        /// Output overvoltage (bit 2)
-        const OUTPUT_OVERVOLTAGE = 0b00000100;
-        /// Reverse current protection (bit 1)
-        const REVERSE_CURRENT = 0b00000010;
-        /// Short circuit protection (bit 0)
-        const SHORT_CIRCUIT = 0b00000001;
-    }
-}
 
-#[cfg(feature = "defmt")]
-impl defmt::Format for SystemStatus4Flags {
-    fn format(&self, fmt: defmt::Formatter) {
-        defmt::write!(fmt, "SystemStatus4Flags({})", self.bits())
-    }
-}
+
+
 
 bitflags! {
-    /// System status 5 flags (REG 0x0C)
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub struct SystemStatus5Flags: u8 {
-        /// Watchdog timeout (bit 7)
-        const WATCHDOG_TIMEOUT = 0b10000000;
-        /// I2C communication error (bit 6)
-        const I2C_ERROR = 0b01000000;
-        /// ADC conversion complete (bit 5)
-        const ADC_COMPLETE = 0b00100000;
-        /// Timer expired (bit 4)
-        const TIMER_EXPIRED = 0b00010000;
-        /// GPIO interrupt (bit 3)
-        const GPIO_INTERRUPT = 0b00001000;
-        /// Power good (bit 2)
-        const POWER_GOOD = 0b00000100;
-        /// System ready (bit 1)
-        const SYSTEM_READY = 0b00000010;
-        /// Initialization complete (bit 0)
-        const INIT_COMPLETE = 0b00000001;
-    }
-}
-
-#[cfg(feature = "defmt")]
-impl defmt::Format for SystemStatus5Flags {
-    fn format(&self, fmt: defmt::Formatter) {
-        defmt::write!(fmt, "SystemStatus5Flags({})", self.bits())
-    }
-}
-
-bitflags! {
-    /// Interrupt status 0 flags (REG 0x0E)
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub struct InterruptStatus0Flags: u8 {
-        /// PD interrupt (bit 7)
-        const PD_INTERRUPT = 0b10000000;
-        /// Type-C interrupt (bit 6)
-        const TYPE_C_INTERRUPT = 0b01000000;
-        /// Power interrupt (bit 5)
-        const POWER_INTERRUPT = 0b00100000;
-        /// Temperature interrupt (bit 4)
-        const TEMPERATURE_INTERRUPT = 0b00010000;
-        /// Voltage interrupt (bit 3)
-        const VOLTAGE_INTERRUPT = 0b00001000;
-        /// Current interrupt (bit 2)
-        const CURRENT_INTERRUPT = 0b00000100;
-        /// Timer interrupt (bit 1)
-        const TIMER_INTERRUPT = 0b00000010;
-        /// GPIO interrupt (bit 0)
-        const GPIO_INTERRUPT = 0b00000001;
-    }
-}
-
-#[cfg(feature = "defmt")]
-impl defmt::Format for InterruptStatus0Flags {
-    fn format(&self, fmt: defmt::Formatter) {
-        defmt::write!(fmt, "InterruptStatus0Flags({})", self.bits())
-    }
-}
-
-bitflags! {
-    /// Interrupt status 1 flags (REG 0x0F)
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub struct InterruptStatus1Flags: u8 {
-        /// System error interrupt (bit 7)
-        const SYSTEM_ERROR = 0b10000000;
-        /// Protection interrupt (bit 6)
-        const PROTECTION = 0b01000000;
-        /// Calibration interrupt (bit 5)
-        const CALIBRATION = 0b00100000;
-        /// Test interrupt (bit 4)
-        const TEST = 0b00010000;
-        /// Debug interrupt (bit 3)
-        const DEBUG = 0b00001000;
-        /// Reserved interrupt (bit 2)
-        const RESERVED_2 = 0b00000100;
-        /// Reserved interrupt (bit 1)
-        const RESERVED_1 = 0b00000010;
-        /// Reserved interrupt (bit 0)
-        const RESERVED_0 = 0b00000001;
-    }
-}
-
-#[cfg(feature = "defmt")]
-impl defmt::Format for InterruptStatus1Flags {
-    fn format(&self, fmt: defmt::Formatter) {
-        defmt::write!(fmt, "InterruptStatus1Flags({})", self.bits())
-    }
-}
-
-bitflags! {
-    /// System status 1 flags (REG 0x08)
+    /// System status 1 flags (REG 0x0B)
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct SystemStatus1Flags: u8 {
         /// Power delivery status (bit 7)
@@ -407,27 +197,7 @@ impl defmt::Format for SystemStatus1Flags {
     }
 }
 
-bitflags! {
-    /// PD status flags (REG 0x09)
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub struct PdStatusFlags: u8 {
-        /// PD contract established (bit 7)
-        const CONTRACT_ESTABLISHED = 0b10000000;
-        /// Source capabilities received (bit 6)
-        const SOURCE_CAPS_RECEIVED = 0b01000000;
-        /// Request message sent (bit 5)
-        const REQUEST_SENT = 0b00100000;
-        /// Accept message received (bit 4)
-        const ACCEPT_RECEIVED = 0b00010000;
-    }
-}
 
-#[cfg(feature = "defmt")]
-impl defmt::Format for PdStatusFlags {
-    fn format(&self, fmt: defmt::Formatter) {
-        defmt::write!(fmt, "PdStatusFlags({})", self.bits())
-    }
-}
 
 
 
@@ -467,125 +237,7 @@ impl defmt::Format for FastChargingFlags {
     }
 }
 
-bitflags! {
-    /// Reset control flags (REG 0x13)
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub struct ResetControlFlags: u8 {
-        /// System reset (bit 7)
-        const SYSTEM_RESET = 0b10000000;
-        /// PD reset (bit 6)
-        const PD_RESET = 0b01000000;
-        /// Type-C reset (bit 5)
-        const TYPE_C_RESET = 0b00100000;
-        /// ADC reset (bit 4)
-        const ADC_RESET = 0b00010000;
-        /// Timer reset (bit 3)
-        const TIMER_RESET = 0b00001000;
-        /// GPIO reset (bit 2)
-        const GPIO_RESET = 0b00000100;
-        /// Watchdog reset (bit 1)
-        const WATCHDOG_RESET = 0b00000010;
-        /// Soft reset (bit 0)
-        const SOFT_RESET = 0b00000001;
-    }
-}
 
-#[cfg(feature = "defmt")]
-impl defmt::Format for ResetControlFlags {
-    fn format(&self, fmt: defmt::Formatter) {
-        defmt::write!(fmt, "ResetControlFlags({})", self.bits())
-    }
-}
-
-bitflags! {
-    /// PD configuration flags (REG 0x17)
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub struct PdConfigFlags: u8 {
-        /// PD enable (bit 7)
-        const PD_ENABLE = 0b10000000;
-        /// Source mode enable (bit 6)
-        const SOURCE_MODE = 0b01000000;
-        /// Sink mode enable (bit 5)
-        const SINK_MODE = 0b00100000;
-        /// DRP mode enable (bit 4)
-        const DRP_MODE = 0b00010000;
-        /// VCONN enable (bit 3)
-        const VCONN_ENABLE = 0b00001000;
-        /// USB communication enable (bit 2)
-        const USB_COMM_ENABLE = 0b00000100;
-        /// PD communication enable (bit 1)
-        const PD_COMM_ENABLE = 0b00000010;
-        /// Auto negotiation enable (bit 0)
-        const AUTO_NEGOTIATION = 0b00000001;
-    }
-}
-
-#[cfg(feature = "defmt")]
-impl defmt::Format for PdConfigFlags {
-    fn format(&self, fmt: defmt::Formatter) {
-        defmt::write!(fmt, "PdConfigFlags({})", self.bits())
-    }
-}
-
-bitflags! {
-    /// Type-C configuration flags (REG 0x18)
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub struct TypeCConfigFlags: u8 {
-        /// Type-C enable (bit 7)
-        const TYPE_C_ENABLE = 0b10000000;
-        /// CC debounce enable (bit 6)
-        const CC_DEBOUNCE_ENABLE = 0b01000000;
-        /// CC pull-up enable (bit 5)
-        const CC_PULLUP_ENABLE = 0b00100000;
-        /// CC pull-down enable (bit 4)
-        const CC_PULLDOWN_ENABLE = 0b00010000;
-        /// VCONN discharge enable (bit 3)
-        const VCONN_DISCHARGE = 0b00001000;
-        /// VBUS discharge enable (bit 2)
-        const VBUS_DISCHARGE = 0b00000100;
-        /// Dead battery support (bit 1)
-        const DEAD_BATTERY = 0b00000010;
-        /// Audio accessory support (bit 0)
-        const AUDIO_ACCESSORY = 0b00000001;
-    }
-}
-
-#[cfg(feature = "defmt")]
-impl defmt::Format for TypeCConfigFlags {
-    fn format(&self, fmt: defmt::Formatter) {
-        defmt::write!(fmt, "TypeCConfigFlags({})", self.bits())
-    }
-}
-
-bitflags! {
-    /// GPIO configuration flags (REG 0x2C)
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub struct GpioConfigFlags: u8 {
-        /// GPIO7 enable (bit 7)
-        const GPIO7_ENABLE = 0b10000000;
-        /// GPIO6 enable (bit 6)
-        const GPIO6_ENABLE = 0b01000000;
-        /// GPIO5 enable (bit 5)
-        const GPIO5_ENABLE = 0b00100000;
-        /// GPIO4 enable (bit 4)
-        const GPIO4_ENABLE = 0b00010000;
-        /// GPIO3 enable (bit 3)
-        const GPIO3_ENABLE = 0b00001000;
-        /// GPIO2 enable (bit 2)
-        const GPIO2_ENABLE = 0b00000100;
-        /// GPIO1 enable (bit 1)
-        const GPIO1_ENABLE = 0b00000010;
-        /// GPIO0 enable (bit 0)
-        const GPIO0_ENABLE = 0b00000001;
-    }
-}
-
-#[cfg(feature = "defmt")]
-impl defmt::Format for GpioConfigFlags {
-    fn format(&self, fmt: defmt::Formatter) {
-        defmt::write!(fmt, "GpioConfigFlags({})", self.bits())
-    }
-}
 
 bitflags! {
     /// Connection control flags (REG 0x14)

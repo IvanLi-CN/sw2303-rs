@@ -5,10 +5,8 @@
 
 use crate::error::Error;
 use crate::registers::{
-    FastChargingFlags, GpioConfigFlags, InterruptStatus0Flags, InterruptStatus1Flags,
-    PdConfigFlags, PdStatusFlags, Register, ResetControlFlags, SystemStatus0Flags,
-    SystemStatus1Flags, SystemStatus2Flags, SystemStatus3Flags, SystemStatus4Flags,
-    SystemStatus5Flags, TypeCConfigFlags, constants,
+    FastChargingFlags, Register, SystemStatus0Flags,
+    SystemStatus1Flags, SystemStatus2Flags, SystemStatus3Flags, constants,
 };
 
 #[cfg(not(feature = "async"))]
@@ -377,15 +375,10 @@ where
         Ok((register_mode, power_watts))
     }
 
-    /// Read PD status flags from REG 0x09.
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(PdStatusFlags)` with the current PD status flags.
-    pub async fn get_pd_status(&mut self) -> Result<PdStatusFlags, Error<I2C::Error>> {
-        let status = self.read_register(Register::PdStatus).await?;
-        Ok(PdStatusFlags::from_bits_truncate(status))
-    }
+    // Note: PD status register (0x09) is not available in official documentation
+    // pub async fn get_pd_status(&mut self) -> Result<u8, Error<I2C::Error>> {
+    //     self.read_register(Register::PdStatus).await
+    // }
 
 
 
@@ -399,90 +392,22 @@ where
         Ok(SystemStatus1Flags::from_bits_truncate(status))
     }
 
-    /// Check if PD contract is established.
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(true)` if PD contract is established, `Ok(false)` otherwise.
-    pub async fn is_pd_contract_established(&mut self) -> Result<bool, Error<I2C::Error>> {
-        let pd_status = self.get_pd_status().await?;
-        let contract_established = pd_status.contains(PdStatusFlags::CONTRACT_ESTABLISHED);
-        #[cfg(feature = "defmt")]
-        defmt::info!("SW2303 PD status: 0x{:02X}, CONTRACT_ESTABLISHED: {}", pd_status.bits(), contract_established);
-        Ok(contract_established)
-    }
+    // Note: PD status and RDO registers are not available in official documentation
+    // pub async fn is_pd_contract_established(&mut self) -> Result<bool, Error<I2C::Error>> {
+    //     // Implementation would need to use available registers
+    //     Ok(false)
+    // }
+    //
+    // pub async fn read_request_data_object(&mut self) -> Result<[u8; 4], Error<I2C::Error>> {
+    //     // Implementation would need to use available registers
+    //     Ok([0, 0, 0, 0])
+    // }
 
-    /// Read Request Data Object (RDO) from REG 0x25-0x28.
-    ///
-    /// This method reads the 4-byte Request Data Object that contains the actual
-    /// negotiated power parameters from the PD protocol.
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok([u8; 4])` with the 4-byte RDO data, or an `Error` if the operation fails.
-    /// The bytes are returned in order: [RDO0, RDO1, RDO2, RDO3]
-    pub async fn read_request_data_object(&mut self) -> Result<[u8; 4], Error<I2C::Error>> {
-        let rdo0 = self.read_register(Register::RequestDo0).await?;
-        let rdo1 = self.read_register(Register::RequestDo1).await?;
-        let rdo2 = self.read_register(Register::RequestDo2).await?;
-        let rdo3 = self.read_register(Register::RequestDo3).await?;
-
-        Ok([rdo0, rdo1, rdo2, rdo3])
-    }
-
-    /// Get the actual negotiated power from the Request Data Object.
-    ///
-    /// This method reads the RDO and extracts the negotiated power value.
-    /// It only returns a valid power value if a PD contract is established.
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(u16)` with the negotiated power in watts, or 0 if no PD contract.
-    /// Returns an `Error` if the operation fails.
-    pub async fn get_negotiated_power(&mut self) -> Result<u16, Error<I2C::Error>> {
-        // First check if PD contract is established
-        let contract_established = self.is_pd_contract_established().await?;
-        #[cfg(feature = "defmt")]
-        defmt::info!("SW2303 PD contract established: {}", contract_established);
-
-        if !contract_established {
-            #[cfg(feature = "defmt")]
-            defmt::info!("SW2303 no PD contract, returning 0W");
-            return Ok(0); // No PD contract, return 0W
-        }
-
-        // Read the Request Data Object
-        let rdo = self.read_request_data_object().await?;
-        #[cfg(feature = "defmt")]
-        defmt::info!("SW2303 RDO data: [{:02X}, {:02X}, {:02X}, {:02X}]", rdo[0], rdo[1], rdo[2], rdo[3]);
-
-        // Parse RDO according to USB PD specification
-        // RDO format (32-bit): [RDO3][RDO2][RDO1][RDO0]
-        // Operating current: bits 19-10 (10 bits) in 10mA units
-        // Maximum operating current: bits 9-0 (10 bits) in 10mA units
-        let rdo_u32 = ((rdo[3] as u32) << 24) | ((rdo[2] as u32) << 16) | ((rdo[1] as u32) << 8) | (rdo[0] as u32);
-        #[cfg(feature = "defmt")]
-        defmt::info!("SW2303 RDO as u32: 0x{:08X}", rdo_u32);
-
-        // Extract operating current (bits 19-10) in 10mA units
-        let operating_current_10ma = (rdo_u32 >> 10) & 0x3FF;
-        let operating_current_ma = operating_current_10ma * 10;
-        #[cfg(feature = "defmt")]
-        defmt::info!("SW2303 operating current: {}mA ({}x10mA)", operating_current_ma, operating_current_10ma);
-
-        // Get the negotiated voltage from voltage registers
-        let voltage_mv = self.get_voltage().await?;
-        #[cfg(feature = "defmt")]
-        defmt::info!("SW2303 voltage: {}mV", voltage_mv);
-
-        // Calculate power: P = V * I (convert to watts)
-        let power_mw = (voltage_mv as u32 * operating_current_ma) / 1000;
-        let power_w = (power_mw / 1000) as u16;
-        #[cfg(feature = "defmt")]
-        defmt::info!("SW2303 calculated power: {}mW -> {}W", power_mw, power_w);
-
-        Ok(power_w)
-    }
+    // Note: Negotiated power calculation requires PD registers not available in official documentation
+    // pub async fn get_negotiated_power(&mut self) -> Result<u16, Error<I2C::Error>> {
+    //     // Implementation would need to use available registers
+    //     Ok(0)
+    // }
 
 
 
@@ -516,49 +441,24 @@ where
         Ok(SystemStatus2Flags::from_bits_truncate(status))
     }
 
-    /// Read system status 4 flags from REG 0x0B.
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(SystemStatus4Flags)` with the current system status 4 flags.
-    pub async fn get_system_status_4(&mut self) -> Result<SystemStatus4Flags, Error<I2C::Error>> {
-        let status = self.read_register(Register::SystemStatus4).await?;
-        Ok(SystemStatus4Flags::from_bits_truncate(status))
-    }
+    // Note: SystemStatus4 and SystemStatus5 registers are not available in official documentation
+    // These were likely project-specific additions
+    // pub async fn get_system_status_4(&mut self) -> Result<u8, Error<I2C::Error>> {
+    //     self.read_register(Register::SystemStatus4).await
+    // }
+    //
+    // pub async fn get_system_status_5(&mut self) -> Result<u8, Error<I2C::Error>> {
+    //     self.read_register(Register::SystemStatus5).await
+    // }
 
-    /// Read system status 5 flags from REG 0x0C.
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(SystemStatus5Flags)` with the current system status 5 flags.
-    pub async fn get_system_status_5(&mut self) -> Result<SystemStatus5Flags, Error<I2C::Error>> {
-        let status = self.read_register(Register::SystemStatus5).await?;
-        Ok(SystemStatus5Flags::from_bits_truncate(status))
-    }
-
-    /// Read interrupt status 0 flags from REG 0x0E.
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(InterruptStatus0Flags)` with the current interrupt status 0 flags.
-    pub async fn get_interrupt_status_0(
-        &mut self,
-    ) -> Result<InterruptStatus0Flags, Error<I2C::Error>> {
-        let status = self.read_register(Register::InterruptStatus0).await?;
-        Ok(InterruptStatus0Flags::from_bits_truncate(status))
-    }
-
-    /// Read interrupt status 1 flags from REG 0x0F.
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(InterruptStatus1Flags)` with the current interrupt status 1 flags.
-    pub async fn get_interrupt_status_1(
-        &mut self,
-    ) -> Result<InterruptStatus1Flags, Error<I2C::Error>> {
-        let status = self.read_register(Register::InterruptStatus1).await?;
-        Ok(InterruptStatus1Flags::from_bits_truncate(status))
-    }
+    // Note: Interrupt status registers are not available in official documentation
+    // pub async fn get_interrupt_status_0(&mut self) -> Result<u8, Error<I2C::Error>> {
+    //     self.read_register(Register::InterruptStatus0).await
+    // }
+    //
+    // pub async fn get_interrupt_status_1(&mut self) -> Result<u8, Error<I2C::Error>> {
+    //     self.read_register(Register::InterruptStatus1).await
+    // }
 
     /// Check if PD negotiation is complete.
     ///
@@ -570,226 +470,68 @@ where
         Ok(status2.contains(SystemStatus2Flags::PD_NEGOTIATION_COMPLETE))
     }
 
-    /// Check if system is ready.
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(true)` if system is ready, `Ok(false)` otherwise.
-    pub async fn is_system_ready(&mut self) -> Result<bool, Error<I2C::Error>> {
-        let status5 = self.get_system_status_5().await?;
-        Ok(status5.contains(SystemStatus5Flags::SYSTEM_READY))
-    }
+    // Note: These methods require registers not available in official documentation
+    // pub async fn is_system_ready(&mut self) -> Result<bool, Error<I2C::Error>> {
+    //     // Implementation would need to use available registers
+    //     Ok(false)
+    // }
+    //
+    // pub async fn is_temperature_warning(&mut self) -> Result<bool, Error<I2C::Error>> {
+    //     // Implementation would need to use available registers
+    //     Ok(false)
+    // }
+    //
+    // pub async fn is_protection_active(&mut self) -> Result<bool, Error<I2C::Error>> {
+    //     // Implementation would need to use available registers
+    //     Ok(false)
+    // }
+    //
+    // pub async fn system_reset(&mut self) -> Result<(), Error<I2C::Error>> {
+    //     // Implementation would need to use available registers
+    //     Ok(())
+    // }
+    //
+    // pub async fn soft_reset(&mut self) -> Result<(), Error<I2C::Error>> {
+    //     // Implementation would need to use available registers
+    //     Ok(())
+    // }
 
-    /// Check for temperature warning.
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(true)` if temperature warning is active, `Ok(false)` otherwise.
-    pub async fn is_temperature_warning(&mut self) -> Result<bool, Error<I2C::Error>> {
-        let status4 = self.get_system_status_4().await?;
-        Ok(status4.contains(SystemStatus4Flags::TEMPERATURE_WARNING))
-    }
+    // Note: PD, Type-C, and GPIO configuration registers are not available in official documentation
+    // pub async fn configure_pd(&mut self, config: u8) -> Result<(), Error<I2C::Error>> {
+    //     self.write_register(Register::PdConfig, config).await
+    // }
+    //
+    // pub async fn configure_type_c(&mut self, config: u8) -> Result<(), Error<I2C::Error>> {
+    //     self.write_register(Register::TypeCConfig, config).await
+    // }
+    //
+    // pub async fn configure_gpio(&mut self, config: u8) -> Result<(), Error<I2C::Error>> {
+    //     self.write_register(Register::GpioConfig, config).await
+    // }
 
-    /// Check for any protection status.
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(true)` if any protection is triggered, `Ok(false)` otherwise.
-    pub async fn is_protection_active(&mut self) -> Result<bool, Error<I2C::Error>> {
-        let status4 = self.get_system_status_4().await?;
-        Ok(status4.contains(SystemStatus4Flags::INPUT_OVERVOLTAGE)
-            || status4.contains(SystemStatus4Flags::INPUT_UNDERVOLTAGE)
-            || status4.contains(SystemStatus4Flags::OUTPUT_OVERVOLTAGE)
-            || status4.contains(SystemStatus4Flags::OUTPUT_UNDERVOLTAGE)
-            || status4.contains(SystemStatus4Flags::SHORT_CIRCUIT)
-            || status4.contains(SystemStatus4Flags::REVERSE_CURRENT)
-            || status4.contains(SystemStatus4Flags::TEMPERATURE_SHUTDOWN))
-    }
+    // Note: These ADC registers are not available in official documentation
+    // pub async fn read_adc_vout(&mut self) -> Result<u8, Error<I2C::Error>> {
+    //     self.read_register(Register::AdcVout).await
+    // }
+    //
+    // pub async fn read_adc_iout(&mut self) -> Result<u8, Error<I2C::Error>> {
+    //     self.read_register(Register::AdcIout).await
+    // }
+    //
+    // pub async fn read_adc_tntc(&mut self) -> Result<u8, Error<I2C::Error>> {
+    //     self.read_register(Register::AdcTntc).await
+    // }
 
-    /// Perform system reset.
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(())` on success, or an `Error` if the operation fails.
-    pub async fn system_reset(&mut self) -> Result<(), Error<I2C::Error>> {
-        self.write_register(
-            Register::ResetControl,
-            ResetControlFlags::SYSTEM_RESET.bits(),
-        )
-        .await?;
-        Ok(())
-    }
+    // Note: Device ID register is not available in official documentation
+    // pub async fn read_device_id(&mut self) -> Result<u8, Error<I2C::Error>> {
+    //     self.read_register(Register::DeviceId).await
+    // }
 
-    /// Perform soft reset.
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(())` on success, or an `Error` if the operation fails.
-    pub async fn soft_reset(&mut self) -> Result<(), Error<I2C::Error>> {
-        self.write_register(Register::ResetControl, ResetControlFlags::SOFT_RESET.bits())
-            .await?;
-        Ok(())
-    }
-
-    /// Configure PD protocol settings.
-    ///
-    /// # Arguments
-    ///
-    /// * `config` - PD configuration flags
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(())` on success, or an `Error` if the operation fails.
-    pub async fn configure_pd(&mut self, config: PdConfigFlags) -> Result<(), Error<I2C::Error>> {
-        self.write_register(Register::PdConfig, config.bits())
-            .await?;
-        Ok(())
-    }
-
-    /// Configure Type-C protocol settings.
-    ///
-    /// # Arguments
-    ///
-    /// * `config` - Type-C configuration flags
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(())` on success, or an `Error` if the operation fails.
-    pub async fn configure_type_c(
-        &mut self,
-        config: TypeCConfigFlags,
-    ) -> Result<(), Error<I2C::Error>> {
-        self.write_register(Register::TypeCConfig, config.bits())
-            .await?;
-        Ok(())
-    }
-
-    /// Configure GPIO settings.
-    ///
-    /// # Arguments
-    ///
-    /// * `config` - GPIO configuration flags
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(())` on success, or an `Error` if the operation fails.
-    pub async fn configure_gpio(
-        &mut self,
-        config: GpioConfigFlags,
-    ) -> Result<(), Error<I2C::Error>> {
-        self.write_register(Register::GpioConfig, config.bits())
-            .await?;
-        Ok(())
-    }
-
-    /// Read ADC Vout (output voltage) data.
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(u8)` with the ADC Vout reading.
-    pub async fn read_adc_vout(&mut self) -> Result<u8, Error<I2C::Error>> {
-        self.read_register(Register::AdcVout).await
-    }
-
-    /// Read ADC Iout (output current) data.
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(u8)` with the ADC Iout reading.
-    pub async fn read_adc_iout(&mut self) -> Result<u8, Error<I2C::Error>> {
-        self.read_register(Register::AdcIout).await
-    }
-
-    /// Read ADC Tntc (NTC temperature) data.
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(u8)` with the ADC Tntc reading.
-    pub async fn read_adc_tntc(&mut self) -> Result<u8, Error<I2C::Error>> {
-        self.read_register(Register::AdcTntc).await
-    }
-
-    /// Read device ID from REG 0x00.
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(u8)` with the device ID.
-    pub async fn read_device_id(&mut self) -> Result<u8, Error<I2C::Error>> {
-        self.read_register(Register::DeviceId).await
-    }
-
-    /// Configure interrupt mask 0.
-    ///
-    /// # Arguments
-    ///
-    /// * `mask` - Interrupt mask flags
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(())` on success, or an `Error` if the operation fails.
-    pub async fn set_interrupt_mask_0(&mut self, mask: u8) -> Result<(), Error<I2C::Error>> {
-        self.write_register(Register::InterruptMask0, mask).await?;
-        Ok(())
-    }
-
-    /// Configure interrupt mask 1.
-    ///
-    /// # Arguments
-    ///
-    /// * `mask` - Interrupt mask flags
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(())` on success, or an `Error` if the operation fails.
-    pub async fn set_interrupt_mask_1(&mut self, mask: u8) -> Result<(), Error<I2C::Error>> {
-        self.write_register(Register::InterruptMask1, mask).await?;
-        Ok(())
-    }
-
-    /// Read timer status.
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(u8)` with the timer status.
-    pub async fn read_timer_status(&mut self) -> Result<u8, Error<I2C::Error>> {
-        self.read_register(Register::TimerStatus).await
-    }
-
-    /// Configure watchdog settings.
-    ///
-    /// # Arguments
-    ///
-    /// * `config` - Watchdog configuration value
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(())` on success, or an `Error` if the operation fails.
-    pub async fn configure_watchdog(&mut self, config: u8) -> Result<(), Error<I2C::Error>> {
-        self.write_register(Register::WatchdogConfig, config)
-            .await?;
-        Ok(())
-    }
-
-    /// Read GPIO status.
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(u8)` with the GPIO status.
-    pub async fn read_gpio_status(&mut self) -> Result<u8, Error<I2C::Error>> {
-        self.read_register(Register::GpioStatus).await
-    }
-
-    /// Control GPIO outputs.
-    ///
-    /// # Arguments
-    ///
-    /// * `control` - GPIO control value
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(())` on success, or an `Error` if the operation fails.
-    pub async fn control_gpio(&mut self, control: u8) -> Result<(), Error<I2C::Error>> {
-        self.write_register(Register::GpioControl, control).await?;
-        Ok(())
-    }
+    // Note: These registers are not available in official documentation
+    // Commented out methods that use non-existent registers:
+    // - set_interrupt_mask_0/1 (InterruptMask0/1 registers)
+    // - read_timer_status (TimerStatus register)
+    // - configure_watchdog (WatchdogConfig register)
+    // - read_gpio_status (GpioStatus register)
+    // - control_gpio (GpioControl register)
 }
