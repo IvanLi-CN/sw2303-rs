@@ -108,29 +108,12 @@ where
 
     /// Initialize the SW2303 PD controller.
     ///
-    /// This method performs the initial setup of the SW2303, including chip version verification
-    /// and basic configuration for UFP detection.
+    /// This method performs the initial setup of the SW2303.
     ///
     /// # Returns
     ///
     /// Returns `Ok(())` on success, or an `Error` if initialization fails.
     pub async fn init(&mut self) -> Result<(), Error<I2C::Error>> {
-        // Verify chip version
-        let chip_version = self.read_register(Register::ChipVersion).await?;
-        let version_bits = chip_version & 0x03; // Extract bits [1:0]
-
-        #[cfg(feature = "defmt")]
-        defmt::info!(
-            "SW2303 chip version: 0x{:02X} (version bits: {})",
-            chip_version,
-            version_bits
-        );
-
-        // Note: REG 0x01 does not have a default value according to official datasheet
-        // Just log the detected chip version without validation
-        #[cfg(feature = "defmt")]
-        defmt::info!("SW2303 chip version detected: {}", version_bits);
-
         #[cfg(feature = "defmt")]
         defmt::info!("SW2303 PD controller initialized successfully");
 
@@ -197,23 +180,7 @@ where
         Ok(())
     }
 
-    /// Set the current limit.
-    ///
-    /// # Arguments
-    ///
-    /// * `current_ma` - The current limit to set in milliamps
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(())` on success, or an `Error` if the operation fails.
-    pub async fn set_current_limit(&mut self, current_ma: u16) -> Result<(), Error<I2C::Error>> {
-        // Convert current from mA to register value (assuming 50mA per unit)
-        let current_units = (current_ma / 50) as u8;
-        self.write_register(Register::CurrentLimit, current_units)
-            .await?;
 
-        Ok(())
-    }
 
     /// Get the current voltage setting.
     ///
@@ -229,17 +196,7 @@ where
         Ok(voltage_units.saturating_mul(100)) // Convert back to mV
     }
 
-    /// Get the current limit setting.
-    ///
-    /// # Returns
-    ///
-    /// Returns the current limit in milliamps, or an `Error` if the operation fails.
-    pub async fn get_current_limit(&mut self) -> Result<u16, Error<I2C::Error>> {
-        let current_units = self.read_register(Register::CurrentLimit).await?;
-        // Use saturating multiplication to prevent overflow
-        // Using 35mA per unit to match set_current_limit conversion
-        Ok((current_units as u16).saturating_mul(35)) // Convert back to mA
-    }
+
 
     /// Check if a sink device is connected (online status).
     ///
@@ -407,24 +364,14 @@ where
 
 
 
-    /// Check if charging is active.
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(true)` if charging is active, `Ok(false)` otherwise.
-    pub async fn is_charging(&mut self) -> Result<bool, Error<I2C::Error>> {
-        let status1 = self.get_system_status_1().await?;
-        Ok(status1.contains(SystemStatus1Flags::CHARGING))
-    }
-
-    /// Check for overcurrent protection status.
+    /// Check for overcurrent protection status (112.5% threshold).
     ///
     /// # Returns
     ///
     /// Returns `Ok(true)` if overcurrent protection is triggered, `Ok(false)` otherwise.
     pub async fn is_overcurrent(&mut self) -> Result<bool, Error<I2C::Error>> {
         let status1 = self.get_system_status_1().await?;
-        Ok(status1.contains(SystemStatus1Flags::OVERCURRENT))
+        Ok(status1.contains(SystemStatus1Flags::OVERCURRENT_112_5_PERCENT))
     }
 
     /// Read system status 2 flags from REG 0x02.
@@ -456,15 +403,7 @@ where
     //     self.read_register(Register::InterruptStatus1).await
     // }
 
-    /// Check if PD negotiation is complete.
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(true)` if PD negotiation is complete, `Ok(false)` otherwise.
-    pub async fn is_pd_negotiation_complete(&mut self) -> Result<bool, Error<I2C::Error>> {
-        let status2 = self.get_system_status_2().await?;
-        Ok(status2.contains(SystemStatus2Flags::PD_NEGOTIATION_COMPLETE))
-    }
+
 
     // Note: These methods require registers not available in official documentation
     // pub async fn is_system_ready(&mut self) -> Result<bool, Error<I2C::Error>> {

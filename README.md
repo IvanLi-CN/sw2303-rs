@@ -129,7 +129,7 @@ The driver provides comprehensive access to all SW2303 registers:
 
 ### Status Registers
 
-- **Device identification**: Device ID (REG 0x00), Chip version (REG 0x01)
+- **Device identification**: Device ID (REG 0x00)
 - **System status**: Status registers 0-5 (REG 0x02, 0x07-0x0D) for comprehensive system monitoring
 - **PD status**: PD protocol status (REG 0x09) including contract establishment and capabilities
 - **Type-C status**: Type-C connection status (REG 0x0A) including CC line detection

@@ -11,8 +11,7 @@ use bitflags::bitflags;
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[repr(u8)]
 pub enum Register {
-    /// REG 0x01: 芯片版本 (Chip version register)
-    ChipVersion = 0x01,
+
     /// REG 0x03: 设置电压高8位 (Set voltage high 8 bits)
     VoltageHigh = 0x03,
     /// REG 0x04: 设置电压低4位 (Set voltage low 4 bits)
@@ -120,17 +119,17 @@ impl Register {
 }
 
 bitflags! {
-    /// System status 0 flags (REG 0x07)
+    /// System status 0 flags (REG 0x07) - 根据官方文档
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct SystemStatus0Flags: u8 {
-        /// PD communication status (bit 7)
-        const PD_COMMUNICATION = 0b10000000;
-        /// Type-C connection status (bit 6)
-        const TYPE_C_CONNECTION = 0b01000000;
-        /// VBUS status (bit 5)
-        const VBUS_STATUS = 0b00100000;
-        /// CC line status (bit 4)
-        const CC_STATUS = 0b00010000;
+        /// 异常拉光耦状态 (bit 4): 0: 未出现异常拉光耦, 1: 出现异常拉光耦
+        const ABNORMAL_OPTOCOUPLER = 0b00010000;
+        /// CC 环路状态 (bit 2): 0: CC 环路打开, 1: CC 环路关闭
+        const CC_LOOP_CLOSED = 0b00000100;
+        /// 线补打开状态 (bit 1): 0: 未打开线补, 1: 线补打开
+        const LINE_COMPENSATION_OPEN = 0b00000010;
+        /// 通路管状态 (bit 0): 0: 通路管关闭, 1: 通路管打开
+        const PASS_TRANSISTOR_OPEN = 0b00000001;
     }
 }
 
@@ -142,25 +141,15 @@ impl defmt::Format for SystemStatus0Flags {
 }
 
 bitflags! {
-    /// System status 2 flags (REG 0x0C)
+    /// System status 2 flags (REG 0x0C) - 根据官方文档
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct SystemStatus2Flags: u8 {
-        /// PD negotiation complete (bit 7)
-        const PD_NEGOTIATION_COMPLETE = 0b10000000;
-        /// Source capabilities sent (bit 6)
-        const SOURCE_CAPS_SENT = 0b01000000;
-        /// Sink capabilities received (bit 5)
-        const SINK_CAPS_RECEIVED = 0b00100000;
-        /// Contract valid (bit 4)
-        const CONTRACT_VALID = 0b00010000;
-        /// Hard reset received (bit 3)
-        const HARD_RESET_RECEIVED = 0b00001000;
-        /// Soft reset received (bit 2)
-        const SOFT_RESET_RECEIVED = 0b00000100;
-        /// Cable reset received (bit 1)
-        const CABLE_RESET_RECEIVED = 0b00000010;
-        /// Protocol error (bit 0)
-        const PROTOCOL_ERROR = 0b00000001;
+        /// CC1 过压指示 (bit 7): 0: CC1 未过压, 1: CC1 过压
+        const CC1_OVERVOLTAGE = 0b10000000;
+        /// CC2 过压指示 (bit 6): 0: CC2 未过压, 1: CC2 过压
+        const CC2_OVERVOLTAGE = 0b01000000;
+        /// DP 过压指示 (bit 5): 0: DP 未过压, 1: DP 过压
+        const DP_OVERVOLTAGE = 0b00100000;
     }
 }
 
@@ -176,17 +165,21 @@ impl defmt::Format for SystemStatus2Flags {
 
 
 bitflags! {
-    /// System status 1 flags (REG 0x0B)
+    /// System status 1 flags (REG 0x0B) - 根据官方文档
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct SystemStatus1Flags: u8 {
-        /// Power delivery status (bit 7)
-        const POWER_DELIVERY = 0b10000000;
-        /// Charging status (bit 6)
-        const CHARGING = 0b01000000;
-        /// Overcurrent protection (bit 5)
-        const OVERCURRENT = 0b00100000;
-        /// Overvoltage protection (bit 4)
-        const OVERVOLTAGE = 0b00010000;
+        /// Vin 超过 25V 指示 (bit 5): 0: Vin 未超过, 1: Vin 超过
+        const VIN_OVER_25V = 0b00100000;
+        /// 过流状态指示 (bit 4): 0: 未过流, 1: 电流超过 112.5%
+        const OVERCURRENT_112_5_PERCENT = 0b00010000;
+        /// Die 过温指示 (bit 3): 0: die 未过温, 1: die 过温
+        const DIE_OVERTEMPERATURE = 0b00001000;
+        /// CC 环路状态 (bit 2): 0: CC 环路关闭, 1: CC 环路打开
+        const CC_LOOP_OPEN = 0b00000100;
+        /// Vin 过压指示 (bit 1): 0: 未过压, 1: 过压
+        const VIN_OVERVOLTAGE = 0b00000010;
+        /// Vin 欠压指示 (bit 0): 0: 未欠压, 1: 欠压
+        const VIN_UNDERVOLTAGE = 0b00000001;
     }
 }
 
@@ -271,8 +264,7 @@ impl defmt::Format for ConnectionControlFlags {
 /// **IMPORTANT**: Before using this driver in production, verify all constants
 /// against the official SW2303 register manual and datasheet.
 pub mod constants {
-    // Note: REG 0x01 (ChipVersion) does not have a default value according to official datasheet
-    // CHIP_VERSION constant removed - should read actual value from hardware
+
     /// Default timeout for operations (in milliseconds)
     pub const DEFAULT_TIMEOUT_MS: u32 = 1000;
     /// Default I2C address for SW2303 (verified with hardware)
