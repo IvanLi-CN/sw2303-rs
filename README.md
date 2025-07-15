@@ -61,7 +61,7 @@ where I2C::Error: core::fmt::Debug
     }
 
     // Check charging status
-    if sw2303.is_charging()? {
+    if sw2303.read_fast_charging_status()?.is_fast_charging() {
         // Device is charging
     }
 
