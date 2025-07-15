@@ -11,7 +11,6 @@ use bitflags::bitflags;
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[repr(u8)]
 pub enum Register {
-
     /// REG 0x03: 设置电压高8位 (Set voltage high 8 bits)
     VoltageHigh = 0x03,
     /// REG 0x04: 设置电压低4位 (Set voltage low 4 bits)
@@ -160,10 +159,6 @@ impl defmt::Format for SystemStatus2Flags {
     }
 }
 
-
-
-
-
 bitflags! {
     /// System status 1 flags (REG 0x0B) - 根据官方文档
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -189,10 +184,6 @@ impl defmt::Format for SystemStatus1Flags {
         defmt::write!(fmt, "SystemStatus1Flags({})", self.bits())
     }
 }
-
-
-
-
 
 bitflags! {
     /// System status 3 flags (REG 0x0D)
@@ -229,8 +220,6 @@ impl defmt::Format for FastChargingFlags {
         defmt::write!(fmt, "FastChargingFlags({})", self.bits())
     }
 }
-
-
 
 bitflags! {
     /// Connection control flags (REG 0x14)

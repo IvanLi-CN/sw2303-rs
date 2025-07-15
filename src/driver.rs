@@ -5,8 +5,8 @@
 
 use crate::error::Error;
 use crate::registers::{
-    FastChargingFlags, Register, SystemStatus0Flags,
-    SystemStatus1Flags, SystemStatus2Flags, SystemStatus3Flags, constants,
+    FastChargingFlags, Register, SystemStatus0Flags, SystemStatus1Flags, SystemStatus2Flags,
+    SystemStatus3Flags, constants,
 };
 
 #[cfg(not(feature = "async"))]
@@ -132,9 +132,21 @@ where
         // Unlock sequence for I2C write enable control 0 (REG 0x12)
         // This enables writing to reg0x14, reg0xA0-BF
         // Official datasheet sequence: 0x20, 0x40, 0x80
-        self.write_register(Register::I2cWriteEnable0, constants::unlock::WRITE_ENABLE_0_STEP1).await?;
-        self.write_register(Register::I2cWriteEnable0, constants::unlock::WRITE_ENABLE_0_STEP2).await?;
-        self.write_register(Register::I2cWriteEnable0, constants::unlock::WRITE_ENABLE_0_STEP3).await?;
+        self.write_register(
+            Register::I2cWriteEnable0,
+            constants::unlock::WRITE_ENABLE_0_STEP1,
+        )
+        .await?;
+        self.write_register(
+            Register::I2cWriteEnable0,
+            constants::unlock::WRITE_ENABLE_0_STEP2,
+        )
+        .await?;
+        self.write_register(
+            Register::I2cWriteEnable0,
+            constants::unlock::WRITE_ENABLE_0_STEP3,
+        )
+        .await?;
 
         Ok(())
     }
@@ -180,8 +192,6 @@ where
         Ok(())
     }
 
-
-
     /// Get the current voltage setting.
     ///
     /// # Returns
@@ -195,8 +205,6 @@ where
         // Use saturating multiplication to prevent overflow
         Ok(voltage_units.saturating_mul(100)) // Convert back to mV
     }
-
-
 
     /// Check if a sink device is connected (online status).
     ///
@@ -333,8 +341,6 @@ where
     //     self.read_register(Register::PdStatus).await
     // }
 
-
-
     /// Read system status 1 flags from REG 0x08.
     ///
     /// # Returns
@@ -361,8 +367,6 @@ where
     //     // Implementation would need to use available registers
     //     Ok(0)
     // }
-
-
 
     /// Check for overcurrent protection status (112.5% threshold).
     ///
@@ -402,8 +406,6 @@ where
     // pub async fn get_interrupt_status_1(&mut self) -> Result<u8, Error<I2C::Error>> {
     //     self.read_register(Register::InterruptStatus1).await
     // }
-
-
 
     // Note: These methods require registers not available in official documentation
     // pub async fn is_system_ready(&mut self) -> Result<bool, Error<I2C::Error>> {
