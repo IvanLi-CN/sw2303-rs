@@ -295,9 +295,9 @@ pub mod constants {
         /// Official datasheet: "7.5*16mV/bit，(存取 12bit 时分辨率为 7.5mV/bit,参见 reg0x3B)"
         pub const VBUS_FACTOR_MV: f32 = 7.5;
 
-        /// REG 0x33: Ich ADC conversion factor: 3.125mA per bit (12-bit mode)
+        /// REG 0x33: Ich ADC conversion factor: 50mA per bit
         /// Official datasheet: "50mA/bit，(存取 12bit 时分辨率为 3.125mA/bit,参见 reg0x3B)"
-        pub const ICH_FACTOR_MA: f32 = 3.125;
+        pub const ICH_FACTOR_MA: f32 = 50.0;
 
         /// REG 0x36: Tdiet ADC conversion factor: 0.1488°C per bit (12-bit mode)
         /// Official datasheet: "2.38°C/bit，(存取 12bit 时分辨率为 0.1488°C/bit,参见 reg0x3B)"
