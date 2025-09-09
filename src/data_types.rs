@@ -181,3 +181,179 @@ impl Default for InterruptConfig {
         }
     }
 }
+
+/// Protocol type enumeration for SW2303 charging protocols.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub enum ProtocolType {
+    /// USB Power Delivery protocol
+    PD,
+    /// Qualcomm Quick Charge 2.0
+    QC20,
+    /// Qualcomm Quick Charge 3.0
+    QC30,
+    /// Huawei Fast Charge Protocol
+    FCP,
+    /// Samsung Adaptive Fast Charging
+    AFC,
+    /// Huawei Super Charge Protocol
+    SCP,
+    /// Qualcomm Power Engine 2.0
+    PE20,
+    /// USB Battery Charging 1.2
+    BC12,
+    /// Super Fast Charge Protocol
+    SFCP,
+}
+
+/// Overall protocol configuration for SW2303.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct ProtocolConfiguration {
+    /// Whether PD protocol is enabled
+    pub pd_enabled: bool,
+    /// Whether QC2.0 protocol is enabled
+    pub qc20_enabled: bool,
+    /// Whether QC3.0 protocol is enabled
+    pub qc30_enabled: bool,
+    /// Whether FCP protocol is enabled
+    pub fcp_enabled: bool,
+    /// Whether AFC protocol is enabled
+    pub afc_enabled: bool,
+    /// Whether SCP protocol is enabled
+    pub scp_enabled: bool,
+    /// Whether PE2.0 protocol is enabled
+    pub pe20_enabled: bool,
+    /// Whether BC1.2 protocol is enabled
+    pub bc12_enabled: bool,
+    /// Whether SFCP protocol is enabled
+    pub sfcp_enabled: bool,
+}
+
+impl Default for ProtocolConfiguration {
+    fn default() -> Self {
+        Self {
+            pd_enabled: false,
+            qc20_enabled: false,
+            qc30_enabled: false,
+            fcp_enabled: false,
+            afc_enabled: false,
+            scp_enabled: false,
+            pe20_enabled: false,
+            bc12_enabled: false,
+            sfcp_enabled: false,
+        }
+    }
+}
+
+/// PD-specific configuration for SW2303.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct PdConfiguration {
+    /// Whether PD protocol is enabled
+    pub enabled: bool,
+    /// Whether VCONN swap is supported
+    pub vconn_swap: bool,
+    /// Whether data role swap is supported
+    pub dr_swap: bool,
+    /// Whether Emarker is enabled
+    pub emarker_enabled: bool,
+    /// Whether PPS (Programmable Power Supply) is enabled
+    pub pps_enabled: bool,
+    /// Fixed voltage levels to enable (9V, 12V, 15V, 20V)
+    /// Each bit represents: [9V, 12V, 15V, 20V]
+    pub fixed_voltages: [bool; 4],
+    /// Whether to bypass 5A emark requirement
+    pub emark_5a_bypass: bool,
+    /// Whether to enable 60-70W emarker
+    pub emarker_60_70w: bool,
+}
+
+impl Default for PdConfiguration {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            vconn_swap: true, // Usually enabled by default
+            dr_swap: false,
+            emarker_enabled: false,
+            pps_enabled: false,
+            fixed_voltages: [false; 4], // All voltages disabled by default
+            emark_5a_bypass: false,
+            emarker_60_70w: false,
+        }
+    }
+}
+
+/// Fast charging configuration for SW2303.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct FastChargeConfiguration {
+    /// Whether QC2.0/QC3.0 protocols are enabled
+    pub qc_enabled: bool,
+    /// Whether FCP protocol is enabled
+    pub fcp_enabled: bool,
+    /// Whether AFC protocol is enabled
+    pub afc_enabled: bool,
+    /// Whether SCP protocol is enabled
+    pub scp_enabled: bool,
+    /// Whether PE2.0 protocol is enabled
+    pub pe20_enabled: bool,
+    /// Whether SFCP protocol is enabled
+    pub sfcp_enabled: bool,
+    /// Whether BC1.2 protocol is enabled
+    pub bc12_enabled: bool,
+    /// SCP current limit configuration (0: 5.0A, 1: 4.0A, 2: 2.0A)
+    pub scp_current_limit: u8,
+    /// FCP/AFC/SFCP current limit (false: 3.25A, true: 2.25A)
+    pub fcp_afc_sfcp_2_25a: bool,
+    /// Whether to enable 20V output for QC2.0
+    pub qc20_20v_enabled: bool,
+    /// Whether to enable 20V output for QC3.0
+    pub qc30_20v_enabled: bool,
+    /// Whether to enable 20V output for PE2.0
+    pub pe20_20v_enabled: bool,
+    /// Whether to enable 12V output for PD
+    pub pd_12v_enabled: bool,
+}
+
+impl Default for FastChargeConfiguration {
+    fn default() -> Self {
+        Self {
+            qc_enabled: false,
+            fcp_enabled: false,
+            afc_enabled: false,
+            scp_enabled: false,
+            pe20_enabled: false,
+            sfcp_enabled: false,
+            bc12_enabled: false,
+            scp_current_limit: 2,     // Default to 2.0A for safety
+            fcp_afc_sfcp_2_25a: true, // Default to 2.25A for safety
+            qc20_20v_enabled: false,
+            qc30_20v_enabled: false,
+            pe20_20v_enabled: false,
+            pd_12v_enabled: false,
+        }
+    }
+}
+
+/// Type-C configuration for SW2303.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct TypeCConfiguration {
+    /// Type-C current broadcast (false: default current, true: 1.5A)
+    pub current_1_5a: bool,
+    /// Whether PD PPS 5A output is enabled
+    pub pd_pps_5a: bool,
+    /// CC line control (false: normal, true: un-driving)
+    pub cc_un_driving: bool,
+}
+
+impl Default for TypeCConfiguration {
+    fn default() -> Self {
+        Self {
+            current_1_5a: false, // Default current
+            pd_pps_5a: false,
+            cc_un_driving: false, // Normal operation
+        }
+    }
+}

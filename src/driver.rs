@@ -3,10 +3,13 @@
 //! SW2303 is a USB PD (Power Delivery) charging controller, not a USB hub controller.
 //! This driver provides methods to interact with the SW2303 for UFP detection and charging management.
 
+use crate::data_types::{PdConfiguration, ProtocolConfiguration, ProtocolType, TypeCConfiguration};
 use crate::error::Error;
 use crate::registers::{
-    FastChargingFlags, Register, SystemStatus0Flags, SystemStatus1Flags, SystemStatus2Flags,
-    SystemStatus3Flags, constants,
+    BroadcastCurrentFlags, FastChargeConfig0Flags, FastChargeConfig1Flags, FastChargeConfig2Flags,
+    FastChargeConfig3Flags, FastChargeConfig4Flags, FastChargingFlags, PdConfig0Flags,
+    PdConfig1Flags, PdConfig2Flags, PdConfig3Flags, Register, SystemStatus0Flags,
+    SystemStatus1Flags, SystemStatus2Flags, SystemStatus3Flags, constants,
 };
 
 #[cfg(not(feature = "async"))]
@@ -463,6 +466,787 @@ where
     // pub async fn read_device_id(&mut self) -> Result<u8, Error<I2C::Error>> {
     //     self.read_register(Register::DeviceId).await
     // }
+
+    // ========================================================================
+    // Protocol Configuration Methods - Low-level Register API
+    // ========================================================================
+
+    /// Set PD configuration 0 register (REG 0xB3) raw flags.
+    ///
+    /// This method provides direct control over PD basic configuration.
+    /// Requires `unlock_write_enable_0()` to be called first.
+    ///
+    /// # Arguments
+    ///
+    /// * `flags` - PD configuration 0 flags to set
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` on success, or an `Error` if the operation fails.
+    pub async fn set_pd_config_0_raw(
+        &mut self,
+        flags: PdConfig0Flags,
+    ) -> Result<(), Error<I2C::Error>> {
+        self.write_register(Register::PdConfig0, flags.bits()).await
+    }
+
+    /// Get PD configuration 0 register (REG 0xB3) raw flags.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(PdConfig0Flags)` on success, or an `Error` if the operation fails.
+    pub async fn get_pd_config_0_raw(&mut self) -> Result<PdConfig0Flags, Error<I2C::Error>> {
+        let value = self.read_register(Register::PdConfig0).await?;
+        Ok(PdConfig0Flags::from_bits_truncate(value))
+    }
+
+    /// Set PD configuration 1 register (REG 0xB4) raw flags.
+    ///
+    /// This method provides direct control over PD advanced features.
+    /// Requires `unlock_write_enable_0()` to be called first.
+    ///
+    /// # Arguments
+    ///
+    /// * `flags` - PD configuration 1 flags to set
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` on success, or an `Error` if the operation fails.
+    pub async fn set_pd_config_1_raw(
+        &mut self,
+        flags: PdConfig1Flags,
+    ) -> Result<(), Error<I2C::Error>> {
+        self.write_register(Register::PdConfig1, flags.bits()).await
+    }
+
+    /// Get PD configuration 1 register (REG 0xB4) raw flags.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(PdConfig1Flags)` on success, or an `Error` if the operation fails.
+    pub async fn get_pd_config_1_raw(&mut self) -> Result<PdConfig1Flags, Error<I2C::Error>> {
+        let value = self.read_register(Register::PdConfig1).await?;
+        Ok(PdConfig1Flags::from_bits_truncate(value))
+    }
+
+    /// Set PD configuration 2 register (REG 0xB5) raw flags.
+    ///
+    /// This method provides direct control over PD voltage levels.
+    /// Requires `unlock_write_enable_0()` to be called first.
+    ///
+    /// # Arguments
+    ///
+    /// * `flags` - PD configuration 2 flags to set
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` on success, or an `Error` if the operation fails.
+    pub async fn set_pd_config_2_raw(
+        &mut self,
+        flags: PdConfig2Flags,
+    ) -> Result<(), Error<I2C::Error>> {
+        self.write_register(Register::PdConfig2, flags.bits()).await
+    }
+
+    /// Get PD configuration 2 register (REG 0xB5) raw flags.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(PdConfig2Flags)` on success, or an `Error` if the operation fails.
+    pub async fn get_pd_config_2_raw(&mut self) -> Result<PdConfig2Flags, Error<I2C::Error>> {
+        let value = self.read_register(Register::PdConfig2).await?;
+        Ok(PdConfig2Flags::from_bits_truncate(value))
+    }
+
+    /// Set PD configuration 3 register (REG 0xA6) raw flags.
+    ///
+    /// This method provides direct control over PD 5A emark configuration.
+    /// Requires `unlock_write_enable_0()` to be called first.
+    ///
+    /// # Arguments
+    ///
+    /// * `flags` - PD configuration 3 flags to set
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` on success, or an `Error` if the operation fails.
+    pub async fn set_pd_config_3_raw(
+        &mut self,
+        flags: PdConfig3Flags,
+    ) -> Result<(), Error<I2C::Error>> {
+        self.write_register(Register::PdConfig3, flags.bits()).await
+    }
+
+    /// Get PD configuration 3 register (REG 0xA6) raw flags.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(PdConfig3Flags)` on success, or an `Error` if the operation fails.
+    pub async fn get_pd_config_3_raw(&mut self) -> Result<PdConfig3Flags, Error<I2C::Error>> {
+        let value = self.read_register(Register::PdConfig3).await?;
+        Ok(PdConfig3Flags::from_bits_truncate(value))
+    }
+
+    /// Set fast charging configuration 0 register (REG 0xAD) raw flags.
+    ///
+    /// This method provides direct control over fast charging basic configuration.
+    /// Requires `unlock_write_enable_0()` to be called first.
+    ///
+    /// # Arguments
+    ///
+    /// * `flags` - Fast charging configuration 0 flags to set
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` on success, or an `Error` if the operation fails.
+    pub async fn set_fast_charge_config_0_raw(
+        &mut self,
+        flags: FastChargeConfig0Flags,
+    ) -> Result<(), Error<I2C::Error>> {
+        self.write_register(Register::FastChargingConfig0, flags.bits())
+            .await
+    }
+
+    /// Get fast charging configuration 0 register (REG 0xAD) raw flags.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(FastChargeConfig0Flags)` on success, or an `Error` if the operation fails.
+    pub async fn get_fast_charge_config_0_raw(
+        &mut self,
+    ) -> Result<FastChargeConfig0Flags, Error<I2C::Error>> {
+        let value = self.read_register(Register::FastChargingConfig0).await?;
+        Ok(FastChargeConfig0Flags::from_bits_truncate(value))
+    }
+
+    /// Set fast charging configuration 1 register (REG 0xAE) raw flags.
+    ///
+    /// This method provides direct control over fast charging voltage configuration.
+    /// Requires `unlock_write_enable_0()` to be called first.
+    ///
+    /// # Arguments
+    ///
+    /// * `flags` - Fast charging configuration 1 flags to set
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` on success, or an `Error` if the operation fails.
+    pub async fn set_fast_charge_config_1_raw(
+        &mut self,
+        flags: FastChargeConfig1Flags,
+    ) -> Result<(), Error<I2C::Error>> {
+        self.write_register(Register::FastChargingConfig1, flags.bits())
+            .await
+    }
+
+    /// Get fast charging configuration 1 register (REG 0xAE) raw flags.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(FastChargeConfig1Flags)` on success, or an `Error` if the operation fails.
+    pub async fn get_fast_charge_config_1_raw(
+        &mut self,
+    ) -> Result<FastChargeConfig1Flags, Error<I2C::Error>> {
+        let value = self.read_register(Register::FastChargingConfig1).await?;
+        Ok(FastChargeConfig1Flags::from_bits_truncate(value))
+    }
+
+    /// Set fast charging configuration 2 register (REG 0xB0) raw flags.
+    ///
+    /// This method provides direct control over fast charging protocol enables.
+    /// Requires `unlock_write_enable_0()` to be called first.
+    ///
+    /// # Arguments
+    ///
+    /// * `flags` - Fast charging configuration 2 flags to set
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` on success, or an `Error` if the operation fails.
+    pub async fn set_fast_charge_config_2_raw(
+        &mut self,
+        flags: FastChargeConfig2Flags,
+    ) -> Result<(), Error<I2C::Error>> {
+        self.write_register(Register::FastChargingConfig2, flags.bits())
+            .await
+    }
+
+    /// Get fast charging configuration 2 register (REG 0xB0) raw flags.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(FastChargeConfig2Flags)` on success, or an `Error` if the operation fails.
+    pub async fn get_fast_charge_config_2_raw(
+        &mut self,
+    ) -> Result<FastChargeConfig2Flags, Error<I2C::Error>> {
+        let value = self.read_register(Register::FastChargingConfig2).await?;
+        Ok(FastChargeConfig2Flags::from_bits_truncate(value))
+    }
+
+    /// Set fast charging configuration 3 register (REG 0xB1) raw flags.
+    ///
+    /// This method provides direct control over advanced fast charging protocols.
+    /// Requires `unlock_write_enable_0()` to be called first.
+    ///
+    /// # Arguments
+    ///
+    /// * `flags` - Fast charging configuration 3 flags to set
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` on success, or an `Error` if the operation fails.
+    pub async fn set_fast_charge_config_3_raw(
+        &mut self,
+        flags: FastChargeConfig3Flags,
+    ) -> Result<(), Error<I2C::Error>> {
+        self.write_register(Register::FastChargingConfig3, flags.bits())
+            .await
+    }
+
+    /// Get fast charging configuration 3 register (REG 0xB1) raw flags.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(FastChargeConfig3Flags)` on success, or an `Error` if the operation fails.
+    pub async fn get_fast_charge_config_3_raw(
+        &mut self,
+    ) -> Result<FastChargeConfig3Flags, Error<I2C::Error>> {
+        let value = self.read_register(Register::FastChargingConfig3).await?;
+        Ok(FastChargeConfig3Flags::from_bits_truncate(value))
+    }
+
+    /// Set fast charging configuration 4 register (REG 0xB2) raw flags.
+    ///
+    /// This method provides direct control over SCP configuration.
+    /// Requires `unlock_write_enable_0()` to be called first.
+    ///
+    /// # Arguments
+    ///
+    /// * `flags` - Fast charging configuration 4 flags to set
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` on success, or an `Error` if the operation fails.
+    pub async fn set_fast_charge_config_4_raw(
+        &mut self,
+        flags: FastChargeConfig4Flags,
+    ) -> Result<(), Error<I2C::Error>> {
+        self.write_register(Register::FastChargingConfig4, flags.bits())
+            .await
+    }
+
+    /// Get fast charging configuration 4 register (REG 0xB2) raw flags.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(FastChargeConfig4Flags)` on success, or an `Error` if the operation fails.
+    pub async fn get_fast_charge_config_4_raw(
+        &mut self,
+    ) -> Result<FastChargeConfig4Flags, Error<I2C::Error>> {
+        let value = self.read_register(Register::FastChargingConfig4).await?;
+        Ok(FastChargeConfig4Flags::from_bits_truncate(value))
+    }
+
+    /// Set broadcast current configuration register (REG 0xA8) raw flags.
+    ///
+    /// This method provides direct control over Type-C current broadcast.
+    /// Requires `unlock_write_enable_0()` to be called first.
+    ///
+    /// # Arguments
+    ///
+    /// * `flags` - Broadcast current configuration flags to set
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` on success, or an `Error` if the operation fails.
+    pub async fn set_broadcast_current_raw(
+        &mut self,
+        flags: BroadcastCurrentFlags,
+    ) -> Result<(), Error<I2C::Error>> {
+        self.write_register(Register::BroadcastCurrentConfig, flags.bits())
+            .await
+    }
+
+    /// Get broadcast current configuration register (REG 0xA8) raw flags.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(BroadcastCurrentFlags)` on success, or an `Error` if the operation fails.
+    pub async fn get_broadcast_current_raw(
+        &mut self,
+    ) -> Result<BroadcastCurrentFlags, Error<I2C::Error>> {
+        let value = self.read_register(Register::BroadcastCurrentConfig).await?;
+        Ok(BroadcastCurrentFlags::from_bits_truncate(value))
+    }
+
+    // ========================================================================
+    // Protocol Configuration Methods - High-level API
+    // ========================================================================
+
+    /// Enable PD protocol.
+    ///
+    /// This method enables the PD protocol by setting the PD_ENABLE bit in REG 0xB3.
+    /// Requires `unlock_write_enable_0()` to be called first.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` on success, or an `Error` if the operation fails.
+    pub async fn enable_pd_protocol(&mut self) -> Result<(), Error<I2C::Error>> {
+        let mut flags = self.get_pd_config_0_raw().await?;
+        flags.insert(PdConfig0Flags::PD_ENABLE);
+        self.set_pd_config_0_raw(flags).await
+    }
+
+    /// Disable PD protocol.
+    ///
+    /// This method disables the PD protocol by clearing the PD_ENABLE bit in REG 0xB3.
+    /// Requires `unlock_write_enable_0()` to be called first.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` on success, or an `Error` if the operation fails.
+    pub async fn disable_pd_protocol(&mut self) -> Result<(), Error<I2C::Error>> {
+        let mut flags = self.get_pd_config_0_raw().await?;
+        flags.remove(PdConfig0Flags::PD_ENABLE);
+        self.set_pd_config_0_raw(flags).await
+    }
+
+    /// Check if PD protocol is enabled.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(true)` if PD protocol is enabled, `Ok(false)` if disabled,
+    /// or an `Error` if the operation fails.
+    pub async fn is_pd_protocol_enabled(&mut self) -> Result<bool, Error<I2C::Error>> {
+        let flags = self.get_pd_config_0_raw().await?;
+        Ok(flags.contains(PdConfig0Flags::PD_ENABLE))
+    }
+
+    /// Enable fast charging protocols.
+    ///
+    /// This method enables fast charging protocols by setting appropriate bits
+    /// in the fast charging configuration registers.
+    /// Requires `unlock_write_enable_0()` to be called first.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` on success, or an `Error` if the operation fails.
+    pub async fn enable_fast_charge_protocol(&mut self) -> Result<(), Error<I2C::Error>> {
+        // Enable QC2.0/QC3.0/PD FIX in REG 0xAD
+        let mut config0 = self.get_fast_charge_config_0_raw().await?;
+        config0.insert(FastChargeConfig0Flags::QC_PD_FIX_ENABLE);
+        self.set_fast_charge_config_0_raw(config0).await?;
+
+        // Enable fast charging in REG 0xB0
+        let mut config2 = self.get_fast_charge_config_2_raw().await?;
+        config2.insert(FastChargeConfig2Flags::FAST_CHARGE_ENABLE);
+        config2.insert(FastChargeConfig2Flags::QC_ENABLE);
+        self.set_fast_charge_config_2_raw(config2).await
+    }
+
+    /// Disable fast charging protocols.
+    ///
+    /// This method disables fast charging protocols by clearing appropriate bits
+    /// in the fast charging configuration registers.
+    /// Requires `unlock_write_enable_0()` to be called first.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` on success, or an `Error` if the operation fails.
+    pub async fn disable_fast_charge_protocol(&mut self) -> Result<(), Error<I2C::Error>> {
+        // Disable QC2.0/QC3.0/PD FIX in REG 0xAD
+        let mut config0 = self.get_fast_charge_config_0_raw().await?;
+        config0.remove(FastChargeConfig0Flags::QC_PD_FIX_ENABLE);
+        self.set_fast_charge_config_0_raw(config0).await?;
+
+        // Disable fast charging in REG 0xB0
+        let mut config2 = self.get_fast_charge_config_2_raw().await?;
+        config2.remove(FastChargeConfig2Flags::FAST_CHARGE_ENABLE);
+        config2.remove(FastChargeConfig2Flags::QC_ENABLE);
+        self.set_fast_charge_config_2_raw(config2).await
+    }
+
+    /// Check if fast charging protocols are enabled.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(true)` if fast charging protocols are enabled, `Ok(false)` if disabled,
+    /// or an `Error` if the operation fails.
+    pub async fn is_fast_charge_protocol_enabled(&mut self) -> Result<bool, Error<I2C::Error>> {
+        let config2 = self.get_fast_charge_config_2_raw().await?;
+        Ok(config2.contains(FastChargeConfig2Flags::FAST_CHARGE_ENABLE))
+    }
+
+    /// Configure multiple protocols at once.
+    ///
+    /// This method provides a convenient way to configure multiple protocols
+    /// with a single call. It automatically handles the required register
+    /// configurations for each protocol.
+    /// Requires `unlock_write_enable_0()` to be called first.
+    ///
+    /// # Arguments
+    ///
+    /// * `config` - Protocol configuration specifying which protocols to enable
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` on success, or an `Error` if the operation fails.
+    pub async fn configure_protocols(
+        &mut self,
+        config: ProtocolConfiguration,
+    ) -> Result<(), Error<I2C::Error>> {
+        // Configure PD protocol
+        if config.pd_enabled {
+            self.enable_pd_protocol().await?;
+        } else {
+            self.disable_pd_protocol().await?;
+        }
+
+        // Configure fast charging protocols
+        let mut config0 = self.get_fast_charge_config_0_raw().await?;
+        let mut config2 = self.get_fast_charge_config_2_raw().await?;
+        let mut config3 = self.get_fast_charge_config_3_raw().await?;
+
+        // QC protocols
+        if config.qc20_enabled || config.qc30_enabled {
+            config0.insert(FastChargeConfig0Flags::QC_PD_FIX_ENABLE);
+            config2.insert(FastChargeConfig2Flags::QC_ENABLE);
+            config2.insert(FastChargeConfig2Flags::FAST_CHARGE_ENABLE);
+        } else {
+            config0.remove(FastChargeConfig0Flags::QC_PD_FIX_ENABLE);
+            config2.remove(FastChargeConfig2Flags::QC_ENABLE);
+        }
+
+        // SCP protocol
+        if config.scp_enabled {
+            config2.insert(FastChargeConfig2Flags::SCP_ENABLE);
+            config2.insert(FastChargeConfig2Flags::SCP_CURRENT_LIMIT);
+        } else {
+            config2.remove(FastChargeConfig2Flags::SCP_ENABLE);
+            config2.remove(FastChargeConfig2Flags::SCP_CURRENT_LIMIT);
+        }
+
+        // FCP protocol
+        if config.fcp_enabled {
+            config3.insert(FastChargeConfig3Flags::FCP_ENABLE);
+        } else {
+            config3.remove(FastChargeConfig3Flags::FCP_ENABLE);
+        }
+
+        // AFC protocol
+        if config.afc_enabled {
+            config3.insert(FastChargeConfig3Flags::AFC_ENABLE);
+        } else {
+            config3.remove(FastChargeConfig3Flags::AFC_ENABLE);
+        }
+
+        // PE2.0 protocol
+        if config.pe20_enabled {
+            config3.insert(FastChargeConfig3Flags::PE_ENABLE);
+        } else {
+            config3.remove(FastChargeConfig3Flags::PE_ENABLE);
+        }
+
+        // SFCP protocol
+        if config.sfcp_enabled {
+            config3.insert(FastChargeConfig3Flags::SFCP_ENABLE);
+        } else {
+            config3.remove(FastChargeConfig3Flags::SFCP_ENABLE);
+        }
+
+        // BC1.2 protocol
+        if config.bc12_enabled {
+            config2.insert(FastChargeConfig2Flags::BC12_ENABLE);
+            config2.insert(FastChargeConfig2Flags::BC12_DPDM);
+        } else {
+            config2.remove(FastChargeConfig2Flags::BC12_ENABLE);
+            config2.remove(FastChargeConfig2Flags::BC12_DPDM);
+        }
+
+        // Apply all configurations
+        self.set_fast_charge_config_0_raw(config0).await?;
+        self.set_fast_charge_config_2_raw(config2).await?;
+        self.set_fast_charge_config_3_raw(config3).await?;
+
+        Ok(())
+    }
+
+    /// Configure PD protocol with detailed settings.
+    ///
+    /// This method provides fine-grained control over PD protocol configuration.
+    /// Requires `unlock_write_enable_0()` to be called first.
+    ///
+    /// # Arguments
+    ///
+    /// * `config` - PD configuration specifying detailed PD settings
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` on success, or an `Error` if the operation fails.
+    pub async fn configure_pd(&mut self, config: PdConfiguration) -> Result<(), Error<I2C::Error>> {
+        // Configure PD Config 0 (REG 0xB3)
+        let mut config0 = PdConfig0Flags::empty();
+        if config.enabled {
+            config0.insert(PdConfig0Flags::PD_ENABLE);
+        }
+        if config.vconn_swap {
+            config0.insert(PdConfig0Flags::VCONN_SWAP);
+        }
+        if config.dr_swap {
+            config0.insert(PdConfig0Flags::DR_SWAP);
+        }
+        if config.emarker_enabled {
+            config0.insert(PdConfig0Flags::EMARKER_ENABLE);
+        }
+        if config.emarker_60_70w {
+            config0.insert(PdConfig0Flags::EMARKER_60_70W);
+        }
+        self.set_pd_config_0_raw(config0).await?;
+
+        // Configure PD Config 1 (REG 0xB4)
+        let mut config1 = PdConfig1Flags::empty();
+        if config.pps_enabled {
+            config1.insert(PdConfig1Flags::PPS_ENABLE);
+        }
+        // Enable discovery features by default when PD is enabled
+        if config.enabled {
+            config1.insert(PdConfig1Flags::DISCOVERY_IDENTITY);
+            config1.insert(PdConfig1Flags::DISCOVERY_SVID);
+        }
+        self.set_pd_config_1_raw(config1).await?;
+
+        // Configure PD Config 2 (REG 0xB5) - Fixed voltages
+        let mut config2 = PdConfig2Flags::empty();
+        if config.fixed_voltages[0] {
+            // 9V
+            config2.insert(PdConfig2Flags::FIXED_9V);
+        }
+        if config.fixed_voltages[1] {
+            // 12V
+            config2.insert(PdConfig2Flags::FIXED_12V);
+        }
+        if config.fixed_voltages[2] {
+            // 15V
+            config2.insert(PdConfig2Flags::FIXED_15V);
+        }
+        if config.fixed_voltages[3] {
+            // 20V
+            config2.insert(PdConfig2Flags::FIXED_20V);
+        }
+        // Enable PPS ranges if PPS is enabled
+        if config.pps_enabled {
+            config2.insert(PdConfig2Flags::PPS0_3_3_5_9V);
+            config2.insert(PdConfig2Flags::PPS1_3_3_11V);
+            config2.insert(PdConfig2Flags::PPS2_3_3_16V);
+            config2.insert(PdConfig2Flags::PPS3_3_3_21V);
+        }
+        self.set_pd_config_2_raw(config2).await?;
+
+        // Configure PD Config 3 (REG 0xA6)
+        let mut config3 = PdConfig3Flags::empty();
+        if config.emark_5a_bypass {
+            config3.insert(PdConfig3Flags::EMARK_5A_BYPASS);
+        }
+        self.set_pd_config_3_raw(config3).await?;
+
+        Ok(())
+    }
+
+    /// Get current protocol status.
+    ///
+    /// This method reads the current protocol configuration from the device.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(ProtocolConfiguration)` with current protocol status,
+    /// or an `Error` if the operation fails.
+    pub async fn get_protocol_status(
+        &mut self,
+    ) -> Result<ProtocolConfiguration, Error<I2C::Error>> {
+        let pd_config0 = self.get_pd_config_0_raw().await?;
+        let fc_config0 = self.get_fast_charge_config_0_raw().await?;
+        let fc_config2 = self.get_fast_charge_config_2_raw().await?;
+        let fc_config3 = self.get_fast_charge_config_3_raw().await?;
+
+        Ok(ProtocolConfiguration {
+            pd_enabled: pd_config0.contains(PdConfig0Flags::PD_ENABLE),
+            qc20_enabled: fc_config0.contains(FastChargeConfig0Flags::QC_PD_FIX_ENABLE)
+                && fc_config2.contains(FastChargeConfig2Flags::QC_ENABLE),
+            qc30_enabled: fc_config0.contains(FastChargeConfig0Flags::QC_PD_FIX_ENABLE)
+                && fc_config2.contains(FastChargeConfig2Flags::QC_ENABLE),
+            fcp_enabled: fc_config3.contains(FastChargeConfig3Flags::FCP_ENABLE),
+            afc_enabled: fc_config3.contains(FastChargeConfig3Flags::AFC_ENABLE),
+            scp_enabled: fc_config2.contains(FastChargeConfig2Flags::SCP_ENABLE),
+            pe20_enabled: fc_config3.contains(FastChargeConfig3Flags::PE_ENABLE),
+            bc12_enabled: fc_config2.contains(FastChargeConfig2Flags::BC12_ENABLE),
+            sfcp_enabled: fc_config3.contains(FastChargeConfig3Flags::SFCP_ENABLE),
+        })
+    }
+
+    /// Check if a specific protocol is enabled.
+    ///
+    /// # Arguments
+    ///
+    /// * `protocol` - The protocol type to check
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(true)` if the protocol is enabled, `Ok(false)` if disabled,
+    /// or an `Error` if the operation fails.
+    pub async fn is_protocol_enabled(
+        &mut self,
+        protocol: ProtocolType,
+    ) -> Result<bool, Error<I2C::Error>> {
+        match protocol {
+            ProtocolType::PD => self.is_pd_protocol_enabled().await,
+            ProtocolType::QC20 | ProtocolType::QC30 => {
+                let config0 = self.get_fast_charge_config_0_raw().await?;
+                let config2 = self.get_fast_charge_config_2_raw().await?;
+                Ok(config0.contains(FastChargeConfig0Flags::QC_PD_FIX_ENABLE)
+                    && config2.contains(FastChargeConfig2Flags::QC_ENABLE))
+            }
+            ProtocolType::FCP => {
+                let config3 = self.get_fast_charge_config_3_raw().await?;
+                Ok(config3.contains(FastChargeConfig3Flags::FCP_ENABLE))
+            }
+            ProtocolType::AFC => {
+                let config3 = self.get_fast_charge_config_3_raw().await?;
+                Ok(config3.contains(FastChargeConfig3Flags::AFC_ENABLE))
+            }
+            ProtocolType::SCP => {
+                let config2 = self.get_fast_charge_config_2_raw().await?;
+                Ok(config2.contains(FastChargeConfig2Flags::SCP_ENABLE))
+            }
+            ProtocolType::PE20 => {
+                let config3 = self.get_fast_charge_config_3_raw().await?;
+                Ok(config3.contains(FastChargeConfig3Flags::PE_ENABLE))
+            }
+            ProtocolType::BC12 => {
+                let config2 = self.get_fast_charge_config_2_raw().await?;
+                Ok(config2.contains(FastChargeConfig2Flags::BC12_ENABLE))
+            }
+            ProtocolType::SFCP => {
+                let config3 = self.get_fast_charge_config_3_raw().await?;
+                Ok(config3.contains(FastChargeConfig3Flags::SFCP_ENABLE))
+            }
+        }
+    }
+
+    /// Get the currently negotiated protocol from device status.
+    ///
+    /// This method reads the fast charging indicator register to determine
+    /// which protocol is currently active.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(Some(ProtocolType))` if a protocol is active,
+    /// `Ok(None)` if no protocol is active, or an `Error` if the operation fails.
+    pub async fn get_negotiated_protocol(
+        &mut self,
+    ) -> Result<Option<ProtocolType>, Error<I2C::Error>> {
+        let status = self.read_register(Register::FastChargingStatus).await?;
+
+        // Extract protocol ID from bits 3-0
+        let protocol_id = status & 0x0F;
+
+        match protocol_id {
+            constants::pd::PROTOCOL_QC20 => Ok(Some(ProtocolType::QC20)),
+            constants::pd::PROTOCOL_QC30 => Ok(Some(ProtocolType::QC30)),
+            constants::pd::PROTOCOL_FCP => Ok(Some(ProtocolType::FCP)),
+            constants::pd::PROTOCOL_SCP => Ok(Some(ProtocolType::SCP)),
+            constants::pd::PROTOCOL_PD_FIX => Ok(Some(ProtocolType::PD)),
+            constants::pd::PROTOCOL_PD_PPS => Ok(Some(ProtocolType::PD)),
+            constants::pd::PROTOCOL_PE20 => Ok(Some(ProtocolType::PE20)),
+            constants::pd::PROTOCOL_SFCP => Ok(Some(ProtocolType::SFCP)),
+            constants::pd::PROTOCOL_AFC => Ok(Some(ProtocolType::AFC)),
+            _ => Ok(None), // No protocol or unknown protocol
+        }
+    }
+
+    /// Configure Type-C current broadcast.
+    ///
+    /// This method configures the Type-C current broadcast capability.
+    /// Requires `unlock_write_enable_0()` to be called first.
+    ///
+    /// # Arguments
+    ///
+    /// * `config` - Type-C configuration
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` on success, or an `Error` if the operation fails.
+    pub async fn configure_type_c(
+        &mut self,
+        config: TypeCConfiguration,
+    ) -> Result<(), Error<I2C::Error>> {
+        let mut flags = self.get_broadcast_current_raw().await?;
+
+        if config.current_1_5a {
+            flags.insert(BroadcastCurrentFlags::TYPE_C_1_5A);
+        } else {
+            flags.remove(BroadcastCurrentFlags::TYPE_C_1_5A);
+        }
+
+        if config.pd_pps_5a {
+            flags.insert(BroadcastCurrentFlags::PD_PPS_5A);
+        } else {
+            flags.remove(BroadcastCurrentFlags::PD_PPS_5A);
+        }
+
+        self.set_broadcast_current_raw(flags).await?;
+
+        // Configure CC line control if needed
+        if config.cc_un_driving {
+            // Note: This would require access to REG 0x14 which may need additional implementation
+            // For now, we'll skip this as it's not in the main configuration registers
+        }
+
+        Ok(())
+    }
+
+    /// Get Type-C configuration status.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(TypeCConfiguration)` with current Type-C settings,
+    /// or an `Error` if the operation fails.
+    pub async fn get_type_c_status(&mut self) -> Result<TypeCConfiguration, Error<I2C::Error>> {
+        let flags = self.get_broadcast_current_raw().await?;
+
+        Ok(TypeCConfiguration {
+            current_1_5a: flags.contains(BroadcastCurrentFlags::TYPE_C_1_5A),
+            pd_pps_5a: flags.contains(BroadcastCurrentFlags::PD_PPS_5A),
+            cc_un_driving: false, // Would need REG 0x14 to read this
+        })
+    }
+
+    /// Enable Type-C 1.5A current broadcast.
+    ///
+    /// This is a convenience method to quickly enable 1.5A current broadcast.
+    /// Requires `unlock_write_enable_0()` to be called first.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` on success, or an `Error` if the operation fails.
+    pub async fn enable_type_c_1_5a(&mut self) -> Result<(), Error<I2C::Error>> {
+        let mut flags = self.get_broadcast_current_raw().await?;
+        flags.insert(BroadcastCurrentFlags::TYPE_C_1_5A);
+        self.set_broadcast_current_raw(flags).await
+    }
+
+    /// Disable Type-C 1.5A current broadcast (use default current).
+    ///
+    /// This is a convenience method to quickly disable 1.5A current broadcast.
+    /// Requires `unlock_write_enable_0()` to be called first.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` on success, or an `Error` if the operation fails.
+    pub async fn disable_type_c_1_5a(&mut self) -> Result<(), Error<I2C::Error>> {
+        let mut flags = self.get_broadcast_current_raw().await?;
+        flags.remove(BroadcastCurrentFlags::TYPE_C_1_5A);
+        self.set_broadcast_current_raw(flags).await
+    }
 
     // Note: These registers are not available in official documentation
     // Commented out methods that use non-existent registers:

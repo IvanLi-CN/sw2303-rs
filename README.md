@@ -9,7 +9,16 @@ A Rust driver for the SW2303 USB PD (Power Delivery) controller chip, designed f
 - **Defmt logging**: Optional structured logging with `defmt` feature
 - **Type-safe register access**: Strongly typed register definitions
 - **Device detection**: Sink device connection monitoring
+- **Protocol configuration**: Complete USB PD and fast charging protocol support
 - **Error handling**: Comprehensive error types for robust applications
+
+### Supported Protocols
+
+- **USB Power Delivery (PD)**: PD 2.0/3.0 with fixed voltages and PPS support
+- **Qualcomm Quick Charge**: QC 2.0/3.0 protocols
+- **Fast Charging Protocols**: FCP, AFC, SCP, PE2.0, SFCP
+- **USB Battery Charging**: BC1.2 protocol
+- **Type-C**: Current broadcast and configuration
 
 ## Installation
 
@@ -55,20 +64,99 @@ where I2C::Error: core::fmt::Debug
         // Sink device connected
     }
 
-    // Check Type-C connection
+    Ok(())
+}
+```
+
+### Protocol Configuration
+
+```rust
+use sw2303::{SW2303, ProtocolConfiguration, PdConfiguration, TypeCConfiguration, ProtocolType, registers::constants::DEFAULT_ADDRESS};
+use embedded_hal::i2c::I2c;
+
+fn configure_protocols<I2C: I2c>(mut i2c: I2C) -> Result<(), sw2303::error::Error<I2C::Error>>
+where I2C::Error: core::fmt::Debug
+{
+    let mut sw2303 = SW2303::new(&mut i2c, DEFAULT_ADDRESS);
+    sw2303.init()?;
+
+    // Unlock write access for configuration registers
+    sw2303.unlock_write_enable_0()?;
+
+    // Configure multiple protocols at once
+    let protocol_config = ProtocolConfiguration {
+        pd_enabled: true,
+        qc20_enabled: true,
+        qc30_enabled: true,
+        fcp_enabled: true,
+        afc_enabled: true,
+        scp_enabled: false, // Disable SCP for safety
+        pe20_enabled: true,
+        bc12_enabled: true,
+        sfcp_enabled: false,
+    };
+    sw2303.configure_protocols(protocol_config)?;
+
+    // Configure PD with specific voltage levels
+    let pd_config = PdConfiguration {
+        enabled: true,
+        vconn_swap: true,
+        dr_swap: false,
+        emarker_enabled: true,
+        pps_enabled: true,
+        fixed_voltages: [true, true, true, false], // Enable 9V, 12V, 15V
+        emark_5a_bypass: false,
+        emarker_60_70w: true,
+    };
+    sw2303.configure_pd(pd_config)?;
+
+    // Configure Type-C current broadcast
+    let type_c_config = TypeCConfiguration {
+        current_1_5a: true, // Enable 1.5A current broadcast
+        pd_pps_5a: true,    // Enable 5A PPS output
+        cc_un_driving: false,
+    };
+    sw2303.configure_type_c(type_c_config)?;
+
+    // Monitor protocol negotiation
     if sw2303.is_sink_device_connected()? {
-        // Type-C device connected
+        if let Some(protocol) = sw2303.get_negotiated_protocol()? {
+            match protocol {
+                ProtocolType::PD => println!("PD protocol negotiated"),
+                ProtocolType::QC20 => println!("QC2.0 protocol negotiated"),
+                ProtocolType::QC30 => println!("QC3.0 protocol negotiated"),
+                ProtocolType::FCP => println!("FCP protocol negotiated"),
+                ProtocolType::AFC => println!("AFC protocol negotiated"),
+                _ => println!("Other protocol negotiated"),
+            }
+        }
     }
 
-    // Check charging status
-    if sw2303.get_fast_charging_status()?.is_fast_charging() {
-        // Device is charging
-    }
+    Ok(())
+}
+```
 
-    // Read ADC values
-    let vin_raw = sw2303.read_adc_vin()?;
-    let vbus_raw = sw2303.read_adc_vbus()?;
-    let ich_raw = sw2303.read_adc_ich()?;
+### Individual Protocol Control
+
+```rust
+// Enable/disable specific protocols
+sw2303.enable_pd_protocol()?;
+sw2303.disable_pd_protocol()?;
+
+// Check protocol status
+if sw2303.is_protocol_enabled(ProtocolType::PD)? {
+    println!("PD protocol is enabled");
+}
+
+// Type-C current control
+sw2303.enable_type_c_1_5a()?;  // Enable 1.5A current broadcast
+sw2303.disable_type_c_1_5a()?; // Use default current
+
+// Get overall protocol status
+let status = sw2303.get_protocol_status()?;
+if status.pd_enabled {
+    println!("PD is enabled");
+}
     let tdiet_raw = sw2303.read_adc_tdiet()?;
 
     // Convert ADC values using official conversion factors
