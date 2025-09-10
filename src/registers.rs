@@ -21,6 +21,10 @@ pub enum Register {
     FastChargingStatus = 0x06,
     /// REG 0x07: System status 0
     SystemStatus0 = 0x07,
+    /// REG 0x09: PD status (按官方手册)
+    PdStatus = 0x09,
+    /// REG 0x0A: Type‑C status (按官方手册)
+    TypeCStatus = 0x0A,
     /// REG 0x0B: System status 1
     SystemStatus1 = 0x0B,
     /// REG 0x0C: System status 2
@@ -738,5 +742,53 @@ pub mod constants {
     /// These values need to be determined from the official SW2303 datasheet.
     pub mod timer {
         // Timer constants removed - need verification from official datasheet
+    }
+}
+bitflags! {
+    /// PD 状态寄存器标志 (REG 0x09)
+    ///
+    /// 说明：部分位的具体语义因手册版本不同可能略有差异。
+    /// 这里先给出位掩码，名称以位序标注，方便在上层据实解析。
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub struct PdStatusFlags: u8 {
+        const B0 = 0b0000_0001;
+        const B1 = 0b0000_0010;
+        const B2 = 0b0000_0100;
+        const B3 = 0b0000_1000;
+        const B4 = 0b0001_0000;
+        const B5 = 0b0010_0000;
+        const B6 = 0b0100_0000;
+        const B7 = 0b1000_0000;
+    }
+}
+
+#[cfg(feature = "defmt")]
+impl defmt::Format for PdStatusFlags {
+    fn format(&self, fmt: defmt::Formatter) {
+        defmt::write!(fmt, "PdStatusFlags({})", self.bits())
+    }
+}
+
+bitflags! {
+    /// Type‑C 状态寄存器标志 (REG 0x0A)
+    ///
+    /// 说明：具体位语义请参照官方手册。此处提供位掩码，便于上层解析与日志输出。
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub struct TypeCStatusFlags: u8 {
+        const B0 = 0b0000_0001;
+        const B1 = 0b0000_0010;
+        const B2 = 0b0000_0100;
+        const B3 = 0b0000_1000;
+        const B4 = 0b0001_0000;
+        const B5 = 0b0010_0000;
+        const B6 = 0b0100_0000;
+        const B7 = 0b1000_0000;
+    }
+}
+
+#[cfg(feature = "defmt")]
+impl defmt::Format for TypeCStatusFlags {
+    fn format(&self, fmt: defmt::Formatter) {
+        defmt::write!(fmt, "TypeCStatusFlags({})", self.bits())
     }
 }
