@@ -8,8 +8,8 @@ use crate::error::Error;
 use crate::registers::{
     BroadcastCurrentFlags, FastChargeConfig0Flags, FastChargeConfig1Flags, FastChargeConfig2Flags,
     FastChargeConfig3Flags, FastChargeConfig4Flags, FastChargingFlags, PdConfig0Flags,
-    PdConfig1Flags, PdConfig2Flags, PdConfig3Flags, PdStatusFlags, Register, SystemStatus0Flags,
-    SystemStatus1Flags, SystemStatus2Flags, SystemStatus3Flags, TypeCStatusFlags, constants,
+    PdConfig1Flags, PdConfig2Flags, PdConfig3Flags, Register, SystemStatus0Flags,
+    SystemStatus1Flags, SystemStatus2Flags, SystemStatus3Flags, constants,
 };
 
 #[cfg(not(feature = "async"))]
@@ -340,11 +340,7 @@ where
     }
 
     // Note: PD status register (0x09) is not available in official documentation
-    /// 读取 PD 状态寄存器 (REG 0x09) 原始标志。
-    pub async fn get_pd_status_flags(&mut self) -> Result<PdStatusFlags, Error<I2C::Error>> {
-        let v = self.read_register(Register::PdStatus).await?;
-        Ok(PdStatusFlags::from_bits_truncate(v))
-    }
+    // PD 状态寄存器 (0x09) 未在已校对文档中提供稳定位义，暂不暴露。
 
     /// Read system status 1 flags from REG 0x08.
     ///
@@ -1221,11 +1217,7 @@ where
         })
     }
 
-    /// 读取 Type‑C 状态寄存器 (REG 0x0A) 原始标志。
-    pub async fn get_type_c_status_flags(&mut self) -> Result<TypeCStatusFlags, Error<I2C::Error>> {
-        let v = self.read_register(Register::TypeCStatus).await?;
-        Ok(TypeCStatusFlags::from_bits_truncate(v))
-    }
+    // Type‑C 状态寄存器 (0x0A) 未在已校对文档中提供稳定位义，暂不暴露。
 
     /// Enable Type-C 1.5A current broadcast.
     ///
