@@ -65,7 +65,7 @@ impl<'a, I2C> SW2303<'a, I2C> {
     sync(cfg(not(feature = "async")), self = "SW2303",),
     async(feature = "async", keep_self)
 )]
-impl<'a, I2C> SW2303<'a, I2C>
+impl<I2C> SW2303<'_, I2C>
 where
     I2C: I2c,
     I2C::Error: core::fmt::Debug,
