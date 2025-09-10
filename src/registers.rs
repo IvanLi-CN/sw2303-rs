@@ -426,7 +426,8 @@ impl defmt::Format for FastChargeConfig2Flags {
 }
 
 bitflags! {
-    /// Fast charging configuration 3 flags (REG 0xB1) - Based on official register manual
+    /// Fast charging configuration 3 flags (REG 0xB1)
+    /// 注意：以下若干位为“0=使能, 1=不使能”的有源低使能语义。
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct FastChargeConfig3Flags: u8 {
         /// Vin ADC过压检测 (bit 7): 0: 禁用, 1: 使能
@@ -435,13 +436,13 @@ bitflags! {
         const VIN_UNDERVOLTAGE = 0b01000000;
         /// 1.2V检测 (bit 5): 0: 禁用, 1: 使能
         const DETECT_1_2V = 0b00100000;
-        /// SFCP协议使能 (bit 4): 0: 禁用, 1: 使能
+        /// SFCP 协议“禁用位” (bit 4): 0: 使能, 1: 不使能
         const SFCP_ENABLE = 0b00010000;
-        /// FCP协议使能 (bit 3): 0: 禁用, 1: 使能
+        /// FCP 协议“禁用位” (bit 3): 0: 使能, 1: 不使能
         const FCP_ENABLE = 0b00001000;
-        /// AFC协议使能 (bit 2): 0: 禁用, 1: 使能
+        /// AFC 协议“禁用位” (bit 2): 0: 使能, 1: 不使能
         const AFC_ENABLE = 0b00000100;
-        /// PE协议使能 (bit 1): 0: 禁用, 1: 使能
+        /// PE 协议“禁用位” (bit 1): 0: 使能, 1: 不使能
         const PE_ENABLE = 0b00000010;
         /// Reserved (bit 0)
         const RESERVED_0 = 0b00000001;
@@ -453,6 +454,14 @@ impl defmt::Format for FastChargeConfig3Flags {
     fn format(&self, fmt: defmt::Formatter) {
         defmt::write!(fmt, "FastChargeConfig3Flags({})", self.bits())
     }
+}
+
+impl FastChargeConfig3Flags {
+    /// 别名：显式表述为“禁用位”（0=使能，1=不使能）以消除歧义
+    pub const SFCP_DISABLE: Self = Self::from_bits_truncate(0b0001_0000);
+    pub const FCP_DISABLE: Self = Self::from_bits_truncate(0b0000_1000);
+    pub const AFC_DISABLE: Self = Self::from_bits_truncate(0b0000_0100);
+    pub const PE_DISABLE: Self = Self::from_bits_truncate(0b0000_0010);
 }
 
 bitflags! {
@@ -545,21 +554,22 @@ pub mod constants {
     pub mod adc {
         /// ADC conversion factors (verified from official datasheet)
 
-        /// REG 0x30: Vin ADC conversion factor: 7.5mV per bit (12-bit mode)
-        /// Official datasheet: "7.5*16mV/bit，(存取 12bit 时分辨率为 7.5mV/bit,参见 reg0x3B)"
-        pub const VIN_FACTOR_MV: f32 = 7.5;
+        /// REG 0x30: Vin ADC conversion factor (8-bit direct read)
+        /// Datasheet note: 8-bit path uses 7.5*16 mV/LSB; when using 12-bit via 0x3B
+        /// selection, the factor is 7.5 mV/LSB (read from 0x3C/0x3D).
+        pub const VIN_FACTOR_MV: f32 = 120.0; // 7.5*16 mV per LSB in 8-bit mode
 
-        /// REG 0x31: Vbus ADC conversion factor: 7.5mV per bit (12-bit mode)
-        /// Official datasheet: "7.5*16mV/bit，(存取 12bit 时分辨率为 7.5mV/bit,参见 reg0x3B)"
-        pub const VBUS_FACTOR_MV: f32 = 7.5;
+        /// REG 0x31: Vbus ADC conversion factor (8-bit direct read)
+        /// Datasheet note: 8-bit path uses 7.5*16 mV/LSB; 12-bit via 0x3B is 7.5 mV/LSB.
+        pub const VBUS_FACTOR_MV: f32 = 120.0; // 7.5*16 mV per LSB in 8-bit mode
 
         /// REG 0x33: Ich ADC conversion factor: 50mA per bit
         /// Official datasheet: "50mA/bit，(存取 12bit 时分辨率为 3.125mA/bit,参见 reg0x3B)"
         pub const ICH_FACTOR_MA: f32 = 50.0;
 
-        /// REG 0x36: Tdiet ADC conversion factor: 0.1488°C per bit (12-bit mode)
-        /// Official datasheet: "2.38°C/bit，(存取 12bit 时分辨率为 0.1488°C/bit,参见 reg0x3B)"
-        pub const TDIET_FACTOR_C: f32 = 0.1488;
+        /// REG 0x36: Tdiet ADC conversion factor (8-bit direct read)
+        /// Datasheet: 2.38°C/bit in 8-bit mode; 0.1488°C/bit in 12-bit mode via 0x3B.
+        pub const TDIET_FACTOR_C: f32 = 2.38;
 
         /// ADC configuration selection values (REG 0x3B bits 2-0)
         /// 1: adc_vin[11:0], 7.5mV/bit
