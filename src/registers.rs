@@ -11,6 +11,8 @@ use bitflags::bitflags;
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[repr(u8)]
 pub enum Register {
+    /// REG 0x01: 芯片版本 (Chip version) - bits 1-0: version number, default 0x1
+    ChipVersion = 0x01,
     /// REG 0x03: Set voltage high 8 bits
     VoltageHigh = 0x03,
     /// REG 0x04: Set voltage low 4 bits
@@ -149,6 +151,12 @@ bitflags! {
         const CC2_OVERVOLTAGE = 0b01000000;
         /// DP 过压指示 (bit 5): 0: DP 未过压, 1: DP 过压
         const DP_OVERVOLTAGE = 0b00100000;
+        /// DM 过压指示 (bit 4): 0: DM 未过压, 1: DM 过压
+        const DM_OVERVOLTAGE = 0b00010000;
+        /// 低电指示 (bit 2): 0: 未处于低电, 1: 处于低电
+        const LOW_BATTERY = 0b00000100;
+        /// 过流保护指示 (bit 0): 0: 未过流, 1: 过流保护
+        const OVERCURRENT_PROTECTION = 0b00000001;
     }
 }
 
@@ -169,8 +177,7 @@ bitflags! {
         const OVERCURRENT_112_5_PERCENT = 0b00010000;
         /// Die 过温指示 (bit 3): 0: die 未过温, 1: die 过温
         const DIE_OVERTEMPERATURE = 0b00001000;
-        /// CC 环路状态 (bit 2): 0: CC 环路关闭, 1: CC 环路打开
-        const CC_LOOP_OPEN = 0b00000100;
+        // bit 2: Reserved
         /// Vin 过压指示 (bit 1): 0: 未过压, 1: 过压
         const VIN_OVERVOLTAGE = 0b00000010;
         /// Vin 欠压指示 (bit 0): 0: 未欠压, 1: 欠压
@@ -207,10 +214,10 @@ bitflags! {
     /// Fast charging status flags (REG 0x06)
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct FastChargingFlags: u8 {
-        /// Fast charging active (bit 7)
-        const FAST_CHARGING = 0b10000000;
-        /// Type-C connected (bit 6)
-        const TYPE_C_CONNECTED = 0b01000000;
+        /// 处于快充协议 (bit 7)
+        const IN_FAST_PROTOCOL = 0b10000000;
+        /// 处于快充电压 (bit 6)
+        const IN_FAST_VOLTAGE = 0b01000000;
     }
 }
 
@@ -225,9 +232,9 @@ bitflags! {
     /// Connection control flags (REG 0x14)
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct ConnectionControlFlags: u8 {
-        /// Connection control (bit 2)
-        const CONNECTION_CONTROL = 0b00000100;
-        /// Type-C CC un-driving (bit 1)
+        /// 线补控制：0 打开线补, 1 关闭线补 (bit 2)
+        const LINE_COMPENSATION_CLOSE = 0b00000100;
+        /// Type-C CC un-driving 触发 (1s 后自动清零) (bit 1)
         const CC_UN_DRIVING = 0b00000010;
     }
 }
@@ -243,22 +250,22 @@ bitflags! {
     /// PD configuration 0 flags (REG 0xB3) - Based on official register manual
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct PdConfig0Flags: u8 {
-        /// 60~70W Emarker control (bit 7): 0: no emarker needed, 1: emarker needed
+        /// 60~70W 是否需要 Emarker 线 (bit 7): 0: 需要, 1: 不需要
         const EMARKER_60_70W = 0b10000000;
-        /// PD hard reset and PPS handling (bit 6): 0: reject hard reset, 1: enter PPS after hard reset
+        /// 非法 PD 请求处理 (bit 6): 0: reject 非法请求, 1: hardreset 并禁止 PPS
         const HARDRESET_PPS = 0b01000000;
         /// Reserved (bit 5)
         const RESERVED_5 = 0b00100000;
-        /// Emarker enable (bit 4): 0: disable, 1: enable
-        const EMARKER_ENABLE = 0b00010000;
-        /// PD dr_swap function (bit 3): 0: not supported, 1: supported
+        /// Emarker 检测使能（有源低）(bit 4): 0: 使能, 1: 不使能
+        const EMARKER_DETECT_DISABLE = 0b00010000;
+        /// PD dr_swap 命令支持 (bit 3): 0: 不支持, 1: 支持
         const DR_SWAP = 0b00001000;
-        /// PD vconn_swap function (bit 2): 0: not supported, 1: supported
+        /// PD vconn_swap 命令支持 (bit 2): 0: 不支持, 1: 支持
         const VCONN_SWAP = 0b00000100;
         /// Reserved (bit 1)
         const RESERVED_1 = 0b00000010;
-        /// PD protocol enable (bit 0): 0: disable, 1: enable
-        const PD_ENABLE = 0b00000001;
+        /// PD 使能（有源低）(bit 0): 0: 使能, 1: 不使能
+        const PD_DISABLE = 0b00000001;
     }
 }
 
@@ -273,8 +280,8 @@ bitflags! {
     /// PD configuration 1 flags (REG 0xB4) - Based on official register manual
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct PdConfig1Flags: u8 {
-        /// PPS0/PPS1/PPS2/PPS3使能 (bit 7): 0: 禁用, 1: 使能
-        const PPS_ENABLE = 0b10000000;
+        /// PPS0/PPS1/PPS2/PPS3 寄存器配置使能 (bit 7): 0: 自动配置, 1: 寄存器配置
+        const PPS_REGISTER_CONFIG = 0b10000000;
         /// PPS3电流限制 (bit 6): 0: 5A, 1: 3A
         const PPS3_3A_LIMIT = 0b01000000;
         /// Reserved (bits 5-4)
@@ -296,25 +303,17 @@ impl defmt::Format for PdConfig1Flags {
 }
 
 bitflags! {
-    /// PD configuration 2 flags (REG 0xB5) - Based on official register manual
+    /// PD configuration 2 flags (REG 0xB5) - 有源低（置位=不使能）
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct PdConfig2Flags: u8 {
-        /// 3.3~21V PPS使能(PPS3) (bit 7): 0: 禁用, 1: 使能
-        const PPS3_3_3_21V = 0b10000000;
-        /// 3.3~16V PPS使能(PPS2) (bit 6): 0: 禁用, 1: 使能
-        const PPS2_3_3_16V = 0b01000000;
-        /// 3.3~11V PPS使能(PPS1) (bit 5): 0: 禁用, 1: 使能
-        const PPS1_3_3_11V = 0b00100000;
-        /// 3.3~5.9V PPS使能(PPS0) (bit 4): 0: 禁用, 1: 使能
-        const PPS0_3_3_5_9V = 0b00010000;
-        /// PD fixed 20V使能 (bit 3): 0: 禁用, 1: 使能
-        const FIXED_20V = 0b00001000;
-        /// PD fixed 15V使能 (bit 2): 0: 禁用, 1: 使能
-        const FIXED_15V = 0b00000100;
-        /// PD fixed 12V使能 (bit 1): 0: 禁用, 1: 使能
-        const FIXED_12V = 0b00000010;
-        /// PD fixed 9V使能 (bit 0): 0: 禁用, 1: 使能
-        const FIXED_9V = 0b00000001;
+        const PPS3_DISABLE = 0b10000000; // 3.3~21V PPS3
+        const PPS2_DISABLE = 0b01000000; // 3.3~16V PPS2
+        const PPS1_DISABLE = 0b00100000; // 3.3~11V PPS1
+        const PPS0_DISABLE = 0b00010000; // 3.3~5.9V PPS0
+        const FIXED_20V_DISABLE = 0b00001000;
+        const FIXED_15V_DISABLE = 0b00000100;
+        const FIXED_12V_DISABLE = 0b00000010;
+        const FIXED_9V_DISABLE  = 0b00000001;
     }
 }
 
@@ -349,16 +348,16 @@ bitflags! {
     /// Fast charging configuration 0 flags (REG 0xAD) - Based on official register manual
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct FastChargeConfig0Flags: u8 {
-        /// QC2.0/QC3.0/PD FIX使能 (bit 7): 0: 禁用, 1: 使能
-        const QC_PD_FIX_ENABLE = 0b10000000;
+        /// QC2.0/QC3.0/PD FIX 线补使能（有源低）(bit 7): 0: 使能, 1: 不使能
+        const QC_PD_FIX_LINECOMP_DISABLE = 0b10000000;
         /// Reserved (bits 6-4)
         const RESERVED_6_4 = 0b01110000;
         /// FCP/AFC/SFCP电流限制 (bit 3): 0: 3.25A, 1: 2.25A
         const FCP_AFC_SFCP_2_25A = 0b00001000;
         /// Reserved (bits 2-1)
         const RESERVED_2_1 = 0b00000110;
-        /// PD与SCP协议优先级 (bit 0): 0: 不使能, 1: 使能
-        const PD_SCP_PRIORITY = 0b00000001;
+        /// PD 是否禁止 SCP 协议 (bit 0): 0: 不禁止, 1: 禁止
+        const PD_FORBID_SCP = 0b00000001;
     }
 }
 
@@ -375,18 +374,18 @@ bitflags! {
     pub struct FastChargeConfig1Flags: u8 {
         /// Reserved (bits 7-6)
         const RESERVED_7_6 = 0b11000000;
-        /// 过压检测阈值 (bit 5): 0: 低于3.0V, 1: 低于5.0V
-        const OVERVOLTAGE_5V = 0b00100000;
-        /// 快充5V输出控制 (bit 4): 0: 不输出5V, 1: 输出5V
-        const OUTPUT_5V = 0b00010000;
-        /// QC3.0 20V使能 (bit 3): 0: 禁用, 1: 使能
-        const QC30_20V = 0b00001000;
-        /// QC2.0 20V使能 (bit 2): 0: 禁用, 1: 使能
-        const QC20_20V = 0b00000100;
-        /// PE2.0 20V使能 (bit 1): 0: 禁用, 1: 使能
-        const PE20_20V = 0b00000010;
-        /// PD 12V使能 (bit 0): 0: 禁用, 1: 使能
-        const PD_12V = 0b00000001;
+        /// 调压支持的最低电压 (bit 5): 0: 最低3.0V, 1: 最低5.0V
+        const MIN_VOLTAGE_5V = 0b00100000;
+        /// 协议是否支持5V以下电压 (bit 4): 0: 支持<5V, 1: 最低5V
+        const NO_UNDER_5V = 0b00010000;
+        /// QC3.0 20V 禁用（有源低）(bit 3): 0: 使能, 1: 不使能
+        const QC30_20V_DISABLE = 0b00001000;
+        /// QC2.0 20V 使能（保留占位）(bit 2)
+        const QC20_20V_ENABLE = 0b00000100;
+        /// PE2.0 20V 使能（保留占位）(bit 1)
+        const PE20_20V_ENABLE = 0b00000010;
+        /// 非 PD 协议 12V 禁用（有源低）(bit 0): 0: 使能, 1: 不使能
+        const NON_PD_12V_DISABLE = 0b00000001;
     }
 }
 
@@ -403,18 +402,18 @@ bitflags! {
     pub struct FastChargeConfig2Flags: u8 {
         /// Reserved (bits 7-6)
         const RESERVED_7_6 = 0b11000000;
-        /// SCP协议使能 (bit 5): 0: 禁用SCP, 1: 使能SCP
-        const SCP_ENABLE = 0b00100000;
-        /// SCP电流限制 (bit 4): 0: 禁用SCP, 1: 使能SCP
-        const SCP_CURRENT_LIMIT = 0b00010000;
-        /// QC3.0/QC2.0使能 (bit 3): 0: 禁用, 1: 使能
-        const QC_ENABLE = 0b00001000;
-        /// 快充协议使能 (bit 2): 0: 禁用, 1: 使能
-        const FAST_CHARGE_ENABLE = 0b00000100;
-        /// BC1.2使能 (bit 1): 0: 禁用, 1: 使能
-        const BC12_ENABLE = 0b00000010;
-        /// BC1.2 DPDM控制 (bit 0): 0: 禁用, 1: 使能
-        const BC12_DPDM = 0b00000001;
+        /// 高压SCP 禁用 (bit 5)
+        const SCP_HV_DISABLE = 0b00100000;
+        /// 低压SCP 禁用 (bit 4)
+        const SCP_LV_DISABLE = 0b00010000;
+        /// QC3.0 禁用 (bit 3)
+        const QC3_DISABLE = 0b00001000;
+        /// QC2.0 禁用 (bit 2)
+        const QC2_DISABLE = 0b00000100;
+        /// 快充总禁用 (bit 1)
+        const FAST_CHARGE_DISABLE = 0b00000010;
+        /// BC1.2 禁用 (bit 0)
+        const BC12_DISABLE = 0b00000001;
     }
 }
 
@@ -571,6 +570,21 @@ pub mod constants {
         /// Datasheet: 2.38°C/bit in 8-bit mode; 0.1488°C/bit in 12-bit mode via 0x3B.
         pub const TDIET_FACTOR_C: f32 = 2.38;
 
+        /// 12-bit ADC mode conversion factors (via REG 0x3B configuration)
+        /// Vin conversion factor: 7.5mV/bit (12-bit mode)
+        pub const VIN_FACTOR_12BIT_MV: f32 = 7.5;
+        /// Vbus conversion factor: 7.5mV/bit (12-bit mode)
+        pub const VBUS_FACTOR_12BIT_MV: f32 = 7.5;
+        /// Ich conversion factor: 3.125mA/bit (12-bit mode)
+        pub const ICH_FACTOR_12BIT_MA: f32 = 3.125;
+        /// Tdiet conversion factor: 0.1488°C/bit (12-bit mode)
+        pub const TDIET_FACTOR_12BIT_C: f32 = 0.1488;
+
+        /// Temperature calculation constants for 12-bit mode
+        /// Formula: Tdiet = (adc_diet[11:0] - TDIET_OFFSET) / TDIET_DIVISOR
+        pub const TDIET_OFFSET: f32 = 1848.0;
+        pub const TDIET_DIVISOR: f32 = 6.72;
+
         /// ADC configuration selection values (REG 0x3B bits 2-0)
         /// 1: adc_vin[11:0], 7.5mV/bit
         /// 2: adc_vbus[11:0], 7.5mV/bit
@@ -596,11 +610,6 @@ pub mod constants {
         pub const WRITE_ENABLE_0_STEP2: u8 = 0x40;
         /// Third unlock sequence step for REG 0x12
         pub const WRITE_ENABLE_0_STEP3: u8 = 0x80;
-
-        /// Legacy constants (incorrect - kept for compatibility)
-        /// These were not verified against official documentation
-        pub const WRITE_ENABLE_0_SEQUENCE: u8 = 0x5A; // DEPRECATED
-        pub const WRITE_ENABLE_1_SEQUENCE: u8 = 0xA5; // DEPRECATED
     }
 
     /// PD protocol constants (verified from official SW2303 register manual)
