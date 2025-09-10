@@ -1,228 +1,434 @@
 # SW2303 寄存器列表
 
-# 1. 版本历史
+## 1. 版本历史
+
+V1.0 初始版本，针对芯片版本号0；V1.1 针对芯片版本号1；V1.2 更新页眉图标；V1.3 更新默认值及REG0xAE[2:1]；V1.4 更换文档模板；
+
+## 2. 寄存器
+
+注意：未定义的寄存器或bit不能被改写
+
+### 2.1. REG0x01：芯片版本
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-2</td><td>/</td><td>/</td><td>/</td></tr><tr><td>1-0</td><td>芯片版本号</td><td>R</td><td>0x1</td></tr></table>
+
+### 2.2. REG0x03：设置电压高8位
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-0</td><td>dac_vol[11:4]
+当前的设置电压：dac_vol[11:0]*10mV</td><td>R</td><td>0x0</td></tr></table>
+
+### 2.3. REG0x04：设置电压低4位
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-4</td><td>dac_vol[3:0]
+当前的设置电压：dac_vol[11:0]*10mV</td><td>R</td><td>0x0</td></tr><tr><td>3-0</td><td>/</td><td>/</td><td>/</td></tr></table>
+
+### 2.4. REG0x05：设置限流
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7</td><td>/</td><td>/</td><td>/</td></tr><tr><td>6-0</td><td>ctrl_icc[6:0]</td><td>R</td><td>0x0</td></tr><tr><td></td><td>当前设置的限流：1000mA+ctrl_icc[6:0]*50mA</td><td></td><td></td></tr></table>
+
+### 2.5. REG0x06：快充指示
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7</td><td>处于快充协议
+0: 未处于快充协议
+1: 处于快充协议</td><td>R</td><td>0x0</td></tr><tr><td>6</td><td>处于快充电压
+0: 未处于快充电压
+1: 处于快充电压</td><td>R</td><td>0x0</td></tr><tr><td>5-4</td><td>PD 协议版本
+1: PD 2.0
+2: PD 3.0
+other: Reserved</td><td>R</td><td>0x0</td></tr><tr><td>3-0</td><td>快充协议指示
+1: QC2.0
+2: QC3.0
+3: FCP
+4: /
+5: SCP
+6: PD FIX
+7: PD PPS
+8: PE1.1
+9: PE2.0
+C: SFCP
+D: AFC
+other: reserved</td><td>R</td><td>0x0</td></tr></table>
+
+### 2.6. REG0x07：系统状态0
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-5</td><td>/</td><td>/</td><td>/</td></tr><tr><td>4</td><td>异常拉光耦状态
+0: 未出现异常拉光耦
+1: 出现异常拉光耦</td><td>R</td><td>0x0</td></tr><tr><td>3</td><td>/</td><td>/</td><td>/</td></tr><tr><td>2</td><td>CC 环路状态
+0: CC 环路打开
+1: CC 环路关闭</td><td>R</td><td>0x0</td></tr><tr><td>1</td><td>线补打开状态</td><td>R</td><td>0x0</td></tr><tr><td></td><td>0:未打开线补
+1:线补打开</td><td></td><td></td></tr><tr><td>0</td><td>通路管状态
+0:通路管关闭
+1:通路管打开</td><td>R</td><td>0x0</td></tr></table>
+
+### 2.7. REG 0x0B: 系统状态1
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-6</td><td>/</td><td>/</td><td>/</td></tr><tr><td>5</td><td>Vin 超过 25V 指示
+0: Vin 低于 25V
+1: Vin 高于 25V</td><td>R</td><td>0x0</td></tr><tr><td>4</td><td>过流状态指示
+0: 未过流
+1: 电流超过 112.5%</td><td>R</td><td>0x0</td></tr><tr><td>3</td><td>Die 过温指示
+0: die 未过温
+1: die 过温</td><td>R</td><td>0x0</td></tr><tr><td>2</td><td>/</td><td>/</td><td>/</td></tr><tr><td>1</td><td>Vin 过压指示
+0: vin 未过压
+1: vin 过压
+当 Vin 电压高于 DAC 请求电压的 20%，认为 Vin 过压</td><td>R</td><td>0x0</td></tr><tr><td>0</td><td>Vin 欠压指示
+0: vin 未欠压
+1: vin 欠压
+Vin 低于 4V 则认为欠压</td><td>R</td><td>0x0</td></tr></table>
+
+### 2.8. REG 0x0C: 系统状态2
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7</td><td>CC1 过压指示
+0:CC1 未过压
+1:CC1 过压</td><td>R</td><td>0x0</td></tr><tr><td>6</td><td>CC2 过压指示
+0:CC2 未过压
+1:CC2 过压</td><td>R</td><td>0x0</td></tr><tr><td>5</td><td>DP 过压指示
+0:DP 未过压
+1:DP 过压</td><td>R</td><td>0x0</td></tr><tr><td>4</td><td>DM 过压指示
+0: DM 未过压
+1: DM 过压</td><td>R</td><td>0x0</td></tr><tr><td>3</td><td>/</td><td>/</td><td>/</td></tr><tr><td>2</td><td>低电指示
+0: 未处于低电
+1: 处于低电
+Vin 低于 3V 则认为低电</td><td>R</td><td>0x0</td></tr><tr><td>1</td><td>/</td><td>/</td><td>/</td></tr><tr><td>0</td><td>过流保护指示
+0: 未过流
+1: 过流保护</td><td>R</td><td>0x0</td></tr></table>
+
+### 2.9. REG 0x0D: 系统状态3
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7</td><td>在线指示
+0: 不在线
+1: 在线
+C 口接入或 A 口电流大于门限，此位置 1; C 口拔出或 A 口电流小于门限，此位清零。</td><td>R</td><td>0x0</td></tr><tr><td>6-0</td><td>Reserved</td><td>/</td><td>/</td></tr></table>
+
+### 2.10. REG 0x12: I2C 写使能控制0
 
-V1.0 初始版本，针对芯片版本号 0；  
-V1.1 针对芯片版本号1；  
-V1.2 更新页眉图标；  
-V1.3 更新默认值及 REG0xAE[2:1]；  
-V1.4 更换文档模板；
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-5</td><td>I2C 写操作使能
+如果要操作寄存器 reg0x14, reg0xA0~BF,需要先执行如下操作:
+1. 写 reg0x12 = 0x20;
+2. 写 reg0x12 = 0x40;
+3. 写 reg0x12 = 0x80;</td><td>R/W</td><td>0x0</td></tr><tr><td>4-0</td><td>/</td><td>/</td><td>/</td></tr></table>
 
-# 2. 寄存器
+### 2.11. REG 0x14: 连接控制
 
-注意 :未定义的寄存器或bit 不能被改写
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-3</td><td>/</td><td>/</td><td>/</td></tr><tr><td>2</td><td>线补控制</td><td>R/W</td><td>0x0</td></tr><tr><td></td><td>0：打开线补
+1：关闭线补</td><td></td><td></td></tr><tr><td>1</td><td>Type-C CC un-driving 使能
+0：无影响
+1：CC un-driving 1s，之后自动清零</td><td>R/WC</td><td>0x0</td></tr><tr><td>0</td><td>/</td><td>/</td><td>/</td></tr></table>
 
-# 2.1. REG 0x01: 芯片版本
+### 2.12. REG0x15:I2C写使能控制1
 
-<html><body><table><tr><td>Bit</td><td>Description</td><td></td><td>R/W</td><td>Default</td></tr><tr><td>7-2</td><td>/</td><td></td><td></td><td>/</td></tr><tr><td>1-0</td><td></td><td></td><td>R</td><td>0x1</td></tr></table></body></html>
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-5</td><td>I2C写操作使能
+如果要操作寄存器reg0x16需要先执行如下操作：
+1.写reg0x12=0x20;
+2.写reg0x12=0x40;
+3.写reg0x12=0x80;</td><td>R/W</td><td>0x0</td></tr><tr><td>4-0</td><td>/</td><td>/</td><td>/</td></tr></table>
 
-# 2.2. REG 0x03: 设置电压高 8 位
+### 2.13. REG0x16：强制控制使能
 
-<html><body><table><tr><td>Bit</td><td>Description</td><td></td><td>R/W</td><td>Default</td></tr><tr><td>7-0</td><td colspan="3">dac_vol[11:4] R J: dac_vol[11:0]*10mV</td><td>0x0</td></tr></table></body></html>
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-4</td><td>/</td><td>/</td><td>/</td></tr><tr><td>3</td><td>强制开通路
+0：无影响
+1：强制开通路</td><td>R/W</td><td>0x0</td></tr><tr><td>2</td><td>强制关通路
+0：无影响
+1：强制关通路</td><td>R/W</td><td>0x0</td></tr><tr><td>1</td><td>强制控制 DAC
+0：无影响
+1：强制控制 dac vol</td><td>R/W</td><td>0x0</td></tr><tr><td>0</td><td>强制控制限流
+0：无影响
+1：强制控制 ctr_ic</td><td>R/W</td><td>0x0</td></tr></table>
 
-# 2.3. REG 0x04: 设置电压低 4 位
+### 2.14. REG0x30:ADC Vin数据
 
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-4</td><td>dac_vol[3:0] Ji: dac_vol[11:0]*10mV</td><td>R</td><td>0x0</td></tr><tr><td>3-0</td><td>/</td><td>/</td><td>/</td></tr></table></body></html>
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-0</td><td>Vin 电压的高 8bit
+7.5*16mv/bit; (若取 12bit 时分辨率为 7.5mv/bit,参见 reg0x3B)</td><td>R</td><td>0x0</td></tr></table>
 
-# 2.4. REG 0x05: 设置限流
+### 2.15. REG 0x31:ADC Vbus 数据
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-0</td><td>Vbus 电压的高 8bit
+7.5*16mv/bit; (若取 12bit 时分辨率为 7.5mv/bit,参见 reg0x3B)</td><td>R</td><td>0x0</td></tr></table>
 
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7</td><td>/</td><td></td><td></td></tr><tr><td>6-0</td><td>ctrl_icc[6:0]</td><td>R</td><td>0x0</td></tr></table></body></html>
+### 2.16. REG 0x33:ADC Ich 数据
 
-<html><body><table><tr><td> i   FR it:</td><td>1000mA+ctrl_icc[6:0]*50mA</td><td></td><td></td></tr></table></body></html>
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-0</td><td>输出电流的高 8bit
+50mA/bit; (若取 12bit 时分辨率为 3.125mA/bit,参见 reg0x3B)</td><td>R</td><td>0x0</td></tr></table>
+
+### 2.17. REG 0x36:ADC Tdiet 数据
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-0</td><td>Die 温度的高 8bit,
+2.38℃/bit; (若取 12bit 时分辨率为 0.1488℃/bit,参见 reg0x3B)</td><td>R</td><td>0x0</td></tr></table>
+
+### 2.18. REG 0x3B:ADC 配置
 
-2.5. REG 0x06: 快充指示  
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7</td><td>xtF R3tJiX 0: *TDiX 1: JTbiX</td><td>R</td><td>0x0</td></tr><tr><td>6</td><td>xT+E 0: *TE 1: TE</td><td>R</td><td>0x0</td></tr><tr><td>5-4</td><td>PD tiXH 1: PD 2.0 2: PD 3.0 other: Reserved t3tt iX##T</td><td>R R</td><td>0x0</td></tr><tr><td>3-0 1: QC2.0 2: QC3.0 3: FCP 4:/ 5: SCP 6: PD FIX 7: PD PPS 8: PE1.1 9: PE2.0 C: SFCP D: AFC other: reserved</td><td></td><td></td><td>0x0</td></tr></table></body></html>
-
-# 2.6. REG 0x07: 系统状态 0
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-5</td><td>/</td><td>/</td><td></td></tr><tr><td>4</td><td>0: *#*</td><td>R</td><td>0x0</td></tr><tr><td>3</td><td>1: W## /</td><td>/</td><td>/</td></tr><tr><td rowspan="2">2</td><td>CC #</td><td>R</td><td>0x0</td></tr><tr><td>0: CC T#TJF 1: CC T#J</td><td></td><td></td></tr><tr><td>1</td><td>x*X#TFFR</td><td>R</td><td>0x0</td></tr></table></body></html>
-
-<html><body><table><tr><td></td><td>0: *#TFT* 1: *TFF</td><td></td><td></td></tr><tr><td>0</td><td>iW 0: i 1: jTF</td><td>R</td><td>0x0</td></tr></table></body></html>
-
-# 2.7. REG 0x0B: 系统状态 1
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-6</td><td></td><td>/</td><td></td></tr><tr><td>5</td><td>Vin #i 25V ##T 0: Vin 1EF 25V 1: Vin #F 25V</td><td>R</td><td>0x0</td></tr><tr><td>4</td><td>0: * 1:  112.5%</td><td>R</td><td>0x0</td></tr><tr><td>3</td><td>Die 0: die * 1: die i</td><td>R</td><td>0x0</td></tr><tr><td>2 / 1</td><td></td><td>/</td><td>/</td></tr><tr><td>Vin iE# 0: vin * 1: vin it</td><td> Vin E#F DAC i#REJ 20%, i Vin E</td><td>R</td><td>0x0</td></tr><tr><td>0</td><td>Vin KE#T 0: vin* 1: vin KE Vin 1 F 4V JlJiKE</td><td>R</td><td>0x0</td></tr></table></body></html>
-
-# 2.8. REG 0x0C: 系统状态 2
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7</td><td>CC1 iE#T 0: CC1 * 1: CC1 </td><td>R</td><td>0x0</td></tr><tr><td>6</td><td>CC2 iE# 0: CC2 * 1: CC2 </td><td>R</td><td>0x0</td></tr><tr><td>5</td><td>DP iE#T 0: DP * 1: DP t</td><td>R</td><td>0x0</td></tr></table></body></html>
-
-<html><body><table><tr><td>4 1: DM </td><td>DM E#T 0: DM</td><td>R</td><td>0x0</td></tr><tr><td>3 /</td><td></td><td>/</td><td>/</td></tr><tr><td>2</td><td>0: *F1 1: 3T1E Vin 1F 3V JJiI1E</td><td>R</td><td>0x0</td></tr><tr><td>1</td><td>/</td><td></td><td></td></tr><tr><td>0</td><td>iR$HT 0: * 1: </td><td>R</td><td>0x0</td></tr></table></body></html>
-
-# 2.9. REG 0x0D: 系统状态 3
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7</td><td>#EHT 0: T 1: C gA XFiR 1 C #WA </td><td>R</td><td>0x0</td></tr><tr><td>6-0</td><td>JFR Reserved</td><td></td><td></td></tr></table></body></html>
-
-# 2.10. REG 0x12: I2C 写使能控制 0
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-5</td><td>I2C S#*1F1E tF* reg0x14, reg0xA0~BF,$ F1F: 1.  reg0x12= 0x20; 2. Fj reg0x12=0x40;</td><td>R/W</td><td>0x0</td></tr><tr><td>4-0</td><td>3. j reg0x12= 0x80;</td><td></td><td></td></tr></table></body></html>
-
-# 2.11. REG 0x14: 连接控制
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-3</td><td>/</td><td>/</td><td>/</td></tr><tr><td>2</td><td>*##J</td><td>R/W</td><td>0x0</td></tr></table></body></html>
-
-<html><body><table><tr><td></td><td>0: tTFF+ 1: *</td><td></td><td></td></tr><tr><td>1</td><td>Type-C CC un-driving 1 0: F$m 1: CC un-driving 1s, Z#</td><td>R/WC</td><td>0x0</td></tr><tr><td>0</td><td></td><td></td><td></td></tr></table></body></html>
-
-# 2.12. REG 0x15: I2C 写使能控制 1
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-5</td><td>I2C 5#*1F1 t1F reg0x16 #t F1F: 1. Fj reg0x12=0x20;</td><td> R/W</td><td>0x0</td></tr><tr><td>4-0</td><td>2. j reg0x12= 0x40; 3. reg0x12=0x80;</td><td></td><td></td></tr><tr><td></td><td></td><td></td><td></td></tr></table></body></html>
-
-# 2.13. REG 0x16: 强制控制使能
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-4</td><td></td><td>/</td><td>/</td></tr><tr><td>3</td><td>3#$J FF i x 0: FmJ 1: 3$Ti</td><td>R/W</td><td>0x0</td></tr><tr><td>2</td><td>3$J Xi 0: F 1: 3$Xi</td><td>R/W</td><td>0x0</td></tr><tr><td>1</td><td>3$J##J DAC 0: F$mj 1: 5## dac_vol</td><td>R/W</td><td>0x0</td></tr><tr><td>0</td><td>3@#J$ FR yt 0:F#qJ 1: 3## ctr_icc</td><td>R/W</td><td>0x0</td></tr></table></body></html>
-
-# 2.14. REG 0x30: ADC Vin 数据
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-0</td><td>Vin J 8bit 7.5*16mv/bit; ( 12bit }##J 7.5mv/bit,JL reg0x3B)</td><td>R</td><td>0x0</td></tr></table></body></html>
-
-# 2.15. REG 0x31: ADC Vbus 数据
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-0</td><td>Vbus EJ 8bit 7.5*16mv/bit; (#X 12bit H>#*J 7.5mv/bit,,JL reg0x3B)</td><td>R</td><td>0x0</td></tr></table></body></html>
-
-# 2.16. REG 0x33: ADC Ich 数据
-
-![](images/382d5040a10771d9745539dc0a5589691e3b883cbeeab298e3c54bdfa3147155.jpg)
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td rowspan="2">7-0</td><td>#  J 8bit</td><td>R</td><td>0x0</td></tr><tr><td>50mA/bit; (x 12bit J* 3.125mA/bit, ,JL reg0x3B)</td><td></td><td></td></tr></table></body></html>
-
-# 2.17. REG 0x36: ADC Tdiet 数据
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-0</td><td>Die  J 8bit, 2.38'C/bit; (#x 12bit JJ#j 0.1488'C/bit, ,JL reg0x3B)</td><td>R</td><td>0x0</td></tr></table></body></html>
-
-# 2.18. REG 0x3B: ADC 配置
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-5</td><td></td><td>/</td><td>/</td></tr><tr><td>2-0</td><td>ADC ##i# SH*#Z,KXJJ ADC ##$7J Reg0x3C F Reg0x3D,jILiEJJ#1TXJ Xf3tnF : 1: adc_vin[11:0], 7.5mV/bit 2: adc_vbus[11:0], 7.5mV/bit 3: adc_ich[11:0],3.125mA/ bit 4: adc_diet[11:0],0.1488'C/bit;Tdiet = (adc_diet[11:0]- 1848)/6.72'C</td><td>R/W</td><td>0x0</td></tr></table></body></html>
-
-# 2.19. REG 0x3C: ADC 数据高 8 位
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td rowspan="2">7-0</td><td>ADC  8bit #</td><td>R</td><td>0x0</td></tr><tr><td>adc_data[11:04]</td><td></td><td></td></tr></table></body></html>
-
-2.20. REG 0x3D: ADC 数据低 4 位  
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-4</td><td>/</td><td></td><td>/</td></tr><tr><td>3-0</td><td>ADC 1 4bit ##7 adc_data[03:00]</td><td>R</td><td>0x0</td></tr></table></body></html>
-
-# 2.21. REG 0xA1: 异常处理配置
-
-<html><body><table><tr><td>Bit</td><td colspan="2">Description</td><td>R/W</td><td>Default</td></tr><tr><td>7</td><td>Die i# e 0: 1AE 1: T</td><td></td><td>R/W</td><td>0x0</td></tr><tr><td>6-0</td><td>Reserved</td><td></td><td>R/W</td><td>0x2</td></tr></table></body></html>
-
-# 2.22. REG 0xA3: 输出电压偏移配置
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-6</td><td># i( PPS, QC3.0F) 0: 200mV 1: 0mV 2: 250mV 3: 100mV</td><td>R/W</td><td>0x3</td></tr><tr><td>5</td><td>Vin j 25V J#I1E 0: TAE 1: 1</td><td>R/W</td><td>0x1</td></tr><tr><td>4:0</td><td>Reserved 7T2</td><td>R/W</td><td>0x0</td></tr></table></body></html>
-
-# 2.23. REG 0xA4: 线补阻抗配置
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td rowspan="4">7-6</td><td>+H$i</td><td>R/W</td><td>0x0</td></tr><tr><td>0: 50mQ 1: 0mQ 2: 100mQ</td><td></td><td></td></tr><tr><td>3: 150mQ</td><td></td><td></td></tr><tr><td>tR#$i#3Jiti# Vin Reserved</td><td>R/W</td><td>0x0</td></tr></table></body></html>
-
-2.24. REG 0xA5: 过压检测配置   
-
-<html><body><table><tr><td>Bit Description</td><td></td><td>R/W</td><td>Default</td></tr><tr><td>7</td><td>DP iE$A 0: 1 1: T</td><td>R/W</td><td>0x0</td></tr><tr><td>6</td><td>DM iER$ 0: 1 1: T</td><td>R/W</td><td>0x0</td></tr><tr><td>5</td><td>CC1/CC2 i1R#1 0: 1AE 1: TE</td><td>R/W</td><td>0x0</td></tr><tr><td>4-0</td><td>Reserved</td><td>R/W</td><td>0x0</td></tr></table></body></html>
-
-# 2.25. REG 0xA6: PD 配置 3
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7</td><td>Reserved 7ET#2#i</td><td>R/W</td><td>0x1</td></tr><tr><td>6</td><td>PD 5A  emark 0:  emark 5A 1: T emark tJ D 5A</td><td>R/W</td><td>0x0</td></tr><tr><td>5-0</td><td>Reserved</td><td>R/W</td><td>0x30</td></tr></table></body></html>
-
-# 2.26. REG 0xA8: 广播电流配置
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7</td><td>PD PPS3  5A 1 0: TnE 1: 1 Q$J5A</td><td>R/W</td><td>0x0</td></tr><tr><td>6</td><td>Type-C* 0: #PDI* 1: 1.5A</td><td>R/W</td><td>0x0</td></tr><tr><td>5-0</td><td>Reserved T</td><td>R/W</td><td>0x0</td></tr></table></body></html>
-
-2.27. REG 0xAB: 异常保护配置  
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-4</td><td>Reserved</td><td>R/W</td><td>0x8</td></tr><tr><td>3-2</td><td>Die i#R$`]R 0: 105C 1: 115C 2: 125'C</td><td>R/W</td><td>0x2</td></tr><tr><td>1-0</td><td>3: 135'C Reserved</td><td>R/W</td><td>0x0</td></tr></table></body></html>
-
-# 2.28. REG 0xAC: 在线配置
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td><td></td></tr><tr><td>7-3</td><td>Reserved</td><td>R/W</td><td>0x6 0x0</td><td></td></tr><tr><td>2</td><td>J>Fj#1J5RJ debounce f[J 0: 6~8s 1: 3~4s</td><td>R/W</td><td></td><td></td></tr><tr><td>1-0</td><td>#J5J A y7E2#1JFR 0: 200mA 1: 100mA 2: 300mA 3: 400mA</td><td></td><td>R/W</td><td>0x2</td></tr></table></body></html>
-
-# 2.29. REG 0xAD: 快充配置 0
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7</td><td>QC2.0/QC3.0/PD FIX F 0: 1E 1: TE</td><td>R/W</td><td>0x0</td></tr><tr><td>6-4</td><td>Reserved 7TA2x</td><td>R/W</td><td>0x0</td></tr><tr><td>3</td><td>FCP/AFC/SFCP bJiX JFR 0: 3.25A 1: 2.25A</td><td>R/W</td><td>0x0</td></tr><tr><td>2-1</td><td>Reserved</td><td>R/W</td><td>0x0</td></tr><tr><td>0</td><td>PD E#1L SCP tiX 0: T#E, QPzF PD tJiXHfaJ DqJ SCP i#R</td><td>R/W</td><td>0x0</td></tr></table></body></html>
-
-<html><body><table><tr><td>1: #</td><td></td><td></td></tr></table></body></html>
-
-# 2.30. REG 0xAE: 快充配置 1
-
-<html><body><table><tr><td>Bit Description</td><td></td><td>R/W</td><td>Default</td></tr><tr><td>7-6</td><td>Reserved</td><td>R/W</td><td>0x3</td></tr><tr><td>5</td><td>iE#1E 0: #3.0V 1: #5.0V</td><td>R/W</td><td>0x0</td></tr><tr><td>4</td><td>tiXX#5V JFE 0: #JF5V 1:*5V</td><td>R/W</td><td>0x0</td></tr><tr><td>3</td><td>QC3.0 tJiX## 20V 1 0: 1 1: T*</td><td>R/W</td><td>0x0</td></tr><tr><td>2</td><td>QC2.0 tiX#20V 1E 0: TAE 1: 1</td><td>R/W</td><td>0x0</td></tr><tr><td>1</td><td>PE2.0 tiX##20V 1E 0: TAE 1: 1</td><td>R/W</td><td>0x0</td></tr><tr><td>0</td><td>#F PD tJiX## 12V lE 0: 1 1: T* 7#: #E 12V HJ, LJiFJJ#QC2.0/QC3.0/PE2.0 J 20V</td><td>R/W</td><td>0x0</td></tr></table></body></html>
-
-# 2.31. REG 0xAF: 功率配置
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7</td><td>#*i 0: y1#BH 1: *</td><td>R/W</td><td>0x0</td></tr><tr><td>6-0</td><td>#* W/bit</td><td>R/W</td><td>0x0</td></tr></table></body></html>
-
-# 2.32. REG 0xB0: 快充配置 2
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-6</td><td>Reserved</td><td>R/W</td><td>0x3</td></tr></table></body></html>
-
-<html><body><table><tr><td></td><td></td><td></td><td></td></tr><tr><td>5</td><td>E SCP tiX 0: 1 SCP 1: SCP</td><td>R/W</td><td>0x0</td></tr><tr><td>4</td><td>1 SCP bJiX1*AE 0: 1 SCP 1: 1 SCP</td><td>R/W</td><td>0x1</td></tr><tr><td>3 0: 1AE 1: T*</td><td>QC3.0 1 QC2.0 1</td><td>R/W</td><td>0x0</td></tr><tr><td>2 1</td><td>0: 1E 1: T</td><td>R/W R/W</td><td>0x0</td></tr><tr><td>0: 1 0</td><td>1: T BC1.2 </td><td></td><td>0x0</td></tr><tr><td>0: 1AE 1: T*</td><td>7: T1 BC1.2 j, TyJDPDM, 1 DPDM R</td><td>R/W</td><td>0x0</td></tr></table></body></html>
-
-# 2.33. REG 0xB1: 快充配置 3
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7</td><td>Vin ADC iE$1(F DAC iEi 20%) 0: 1AE 1: T</td><td>R/W</td><td>0x0</td></tr><tr><td>6</td><td>Vin #itE(F DAC iE1i 2V) 0: 1E 1:TE</td><td>R/W</td><td>0x0</td></tr><tr><td>5</td><td>EE1.2V A 0: 1E 1: T</td><td>R/W</td><td>0x0</td></tr><tr><td>4</td><td>SFCP tJiX1E 0: 1E 1: T</td><td>R/W</td><td>0x0</td></tr><tr><td>3</td><td>FCP O: 1 1: T</td><td>R/W</td><td>0x0</td></tr><tr><td>2</td><td>AFC 1E 0: 1 1: T*</td><td>R/W</td><td>0x0</td></tr></table></body></html>
-
-<html><body><table><tr><td>1</td><td>PE 1AE 0: 1E 1: T</td><td>R/W</td><td>0x0</td></tr><tr><td>0</td><td>Reserved</td><td>R/W</td><td>0x0</td></tr></table></body></html>
-
-# 2.34. REG 0xB2: 快充配置 4
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-6</td><td>Reserved 7T2xi</td><td>R/W</td><td>0x0</td></tr><tr><td>5-4</td><td>SCP tiXF*t#HJE 0: 5.0A 1: 4.0A 2: 2.0A</td><td>R/W</td><td>0x2</td></tr><tr><td>3 0: 2.78A 1: 2.77A</td><td>3: Reserved 25w Hf 9V PDO J</td><td>R/W</td><td>0x1</td></tr><tr><td>2-0</td><td>Reserved</td><td>R/W</td><td>0x1</td></tr></table></body></html>
-
-# 2.35. REG 0xB3: PD 配置 0
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7</td><td>Ij7 60~70W # Emarker 0:# emarker 1: T emarker </td><td>R/W</td><td>0x0</td></tr><tr><td>6</td><td>4x3J#F7 PD i#KHJXIJj rQ 0: reject #i# 1:  hardreset ## PPS</td><td>R/W</td><td>0x1</td></tr><tr><td>5</td><td>Reserved 7T</td><td>R/W</td><td>0x1</td></tr><tr><td>4</td><td>Emarker  0: 1E 1: T</td><td>R/W</td><td>0x0</td></tr><tr><td>3</td><td>PD dr_swap ## 0: T# 1: #</td><td>R/W</td><td>0x0</td></tr></table></body></html>
-
-<html><body><table><tr><td>2</td><td>PD vconn_swap ## 0: T# 1: </td><td>R/W</td><td>0x1</td></tr><tr><td>1 Reserved</td><td>7T</td><td>R/W</td><td>0x0</td></tr><tr><td>0</td><td>PD 1 0: 1E 1: Te</td><td>R/W</td><td>0x0</td></tr></table></body></html>
-
-# 2.36. REG 0xB4: PD 配置 1
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td> R/W</td><td>Default</td></tr><tr><td>7</td><td>PPSO/PPS1/PPS2/PPS3 0: 1:</td><td>R/W</td><td>0x0</td></tr><tr><td>6</td><td>PPS3 0: 5A 1: 3A</td><td>R/W</td><td>0x0</td></tr><tr><td>5-4</td><td>Reserved 7T2</td><td>R/W</td><td>0x0</td></tr><tr><td>3</td><td>PD discovery identity 0: T# 1: #</td><td>R/W</td><td>0x0</td></tr><tr><td>2</td><td>PD discovery SVID ## 0: Tx# 1: #</td><td>R/W</td><td>0x0</td></tr><tr><td>1-0</td><td>PD peak current 7X12x PDO#XJHJI</td><td>R/W</td><td>0x0</td></tr></table></body></html>
-
-# 2.37. REG 0xB5: PD 配置 2
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7</td><td>3.3~21V PPS E(PPS3) 0: 1 1: T</td><td>R/W</td><td>0x0</td></tr><tr><td>6</td><td>3.3~16V PPS 1#E(PPS2) 0: 1 1: T</td><td>R/W</td><td>0x0</td></tr><tr><td>5</td><td>3.3~11V PPS 1E(PPS1) 0: 1 1: T</td><td>R/W</td><td>0x0</td></tr></table></body></html>
-
-<html><body><table><tr><td>4 0: 1E</td><td>3.3~5.9V PPS 1#E(PPSO) 1: T</td><td>R/W</td><td>0x0</td></tr><tr><td>3 0: 1 1: T</td><td>PD fixed 20V 1</td><td>R/W</td><td>0x0</td></tr><tr><td>2 1</td><td>PD fixed 15V I 0: 1 1: T PD fixed 12V I</td><td>R/W R/W</td><td>0x0</td></tr><tr><td>0: 1AE 1: T 0</td><td></td><td>R/W</td><td>0x0</td></tr><tr><td></td><td>PD fixed 9V fE 0: 1 1: T</td><td></td><td>0x0</td></tr></table></body></html>
-
-# 2.38. REG 0xB6: VID 配置 0
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td></td><td>R/W</td><td>Default</td></tr><tr><td>7-0</td><td>vendor ID # VID[15:8]</td><td></td><td>R/W</td><td>0x0</td></tr></table></body></html>
-
-# 2.39. REG 0xB7: VID 配置 11
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td></td><td>R/W</td><td>Default</td></tr><tr><td>7-0</td><td>vendor ID VID[7:0]</td><td></td><td>R/W</td><td>0x0</td></tr></table></body></html>
-
-# 2.40. REG 0xB8: XID 配置 0
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-0</td><td>XID  XID[31:24]</td><td>R/W</td><td>0x0</td></tr></table></body></html>
-
-# 2.41. REG 0xB9: XID 配置 1
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-0</td><td>XID  XID[23:16]</td><td>R/W</td><td>0x0</td></tr></table></body></html>
-
-# 2.42. REG 0xBA: XID 配置 2
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td></td><td>R/W Default</td></tr></table></body></html>
-
-<html><body><table><tr><td>7-0</td><td>XID # XID[15:8]</td><td>R/W</td><td>0x0</td><td></td></tr></table></body></html>
-
-# 2.43. REG 0xBB: XID 配置 3
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-0</td><td>XID # XID[7:0]</td><td>R/W</td><td>0x0</td></tr></table></body></html>
-
-# 2.44. REG 0xBC: PID 配置 0
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td></td><td>R/W Default</td></tr><tr><td>7-0</td><td>PID  PID[15:8]</td><td></td><td>R/W 0x0</td></tr></table></body></html>
-
-# 2.45. REG 0xBD: PID 配置 1
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td></td><td>R/W</td><td>Default</td></tr><tr><td>7-0</td><td>PID  PID[7:0]</td><td></td><td>R/W</td><td>0x0</td></tr></table></body></html>
-
-# 2.46. REG 0xBE: SVID 配置 0
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-0</td><td>SVID # SVID[15:8]</td><td>R/W</td><td>0x0</td></tr></table></body></html>
-
-# 2.47. REG 0xBF: SVID 配置 1
-
-<html><body><table><tr><td>Bit</td><td>Description</td><td></td><td>R/W</td><td>Default</td></tr><tr><td>7-0</td><td colspan="2">SVID # SVID[7:0]</td><td>R/W</td><td>0x0</td><td></td></tr></table></body></html>
-
-# 免责声明
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-5</td><td>/</td><td>/</td><td>/</td></tr><tr><td>2-0</td><td>ADC 数据选择
+写此寄存器之后，将对应的 ADC 数据锁存到 Reg0x3C 和 Reg0x3D，防止读到的数据高低位不对应
+对应关系如下：
+1: adc_vin[11:0], 7.5mV/bit
+2: adc_vbus[11:0], 7.5mV/bit
+3: adc_ich[11:0], 3.125mA/bit
+4: adc_diet[11:0], 0.1488℃/bit; Tdiet = (adc_diet[11:0]-
+1848)/6.72℃
+Other: reserved</td><td>R/W</td><td>0x0</td></tr></table>
+
+### 2.19. REG 0x3C:ADC 数据高8位
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-0</td><td>ADC 高 8bit 数据锁存
+adc_data[11:04]</td><td>R</td><td>0x0</td></tr></table>
+
+### 2.20. REG0x3D:ADC数据低4位
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-4</td><td>/</td><td>/</td><td>/</td></tr><tr><td>3-0</td><td>ADC 低 4bit 数据锁存
+adc_data[03:00]</td><td>R</td><td>0x0</td></tr></table>
+
+### 2.21. REG0xA1：异常处理配置
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7</td><td>Die 过温异常处理使能
+0: 使能
+1: 不使能</td><td>R/W</td><td>0x0</td></tr><tr><td>6-0</td><td>Reserved
+注意不能修改默认值</td><td>R/W</td><td>0x2</td></tr></table>
+
+### 2.22. REG0xA3：输出电压偏移配置
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-6</td><td>输出电压固定偏移设置(对 PPS, QC3.0 和低压直充无效)
+0: 200mV
+1: 0mV
+2: 250mV
+3: 100mV</td><td>R/W</td><td>0x3</td></tr><tr><td>5</td><td>Vin 超过 25V 的异常处理使能
+0: 不使能
+1: 使能</td><td>R/W</td><td>0x1</td></tr><tr><td>4:0</td><td>Reserved
+注意不能修改默认值</td><td>R/W</td><td>0x0</td></tr></table>
+
+### 2.23. REG0xA4：线补阻抗配置
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-6</td><td>线补阻抗设置
+0: 50mΩ
+1: 0mΩ
+2: 100mΩ
+3: 150mΩ
+根据阻抗和电流计算得到线降后，通过反馈调高 Vin</td><td>R/W</td><td>0x0</td></tr><tr><td>5-0</td><td>Reserved
+注意不能修改默认值</td><td>R/W</td><td>0x0</td></tr></table>
+
+### 2.24. REG0xA5：过压检测配置
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7</td><td>DP 过压保护使能
+0: 使能
+1: 不使能</td><td>R/W</td><td>0x0</td></tr><tr><td>6</td><td>DM 过压保护使能
+0: 使能
+1: 不使能</td><td>R/W</td><td>0x0</td></tr><tr><td>5</td><td>CC1/CC2 过压保护使能
+0: 使能
+1: 不使能</td><td>R/W</td><td>0x0</td></tr><tr><td>4-0</td><td>Reserved
+注意不能修改默认值</td><td>R/W</td><td>0x0</td></tr></table>
+
+### 2.25. REG0xA6:PD配置3
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7</td><td>Reserved
+注意不能修改默认值</td><td>R/W</td><td>0x1</td></tr><tr><td>6</td><td>PD 5A 电流是否需检测 emark
+0: 需要检测到 emark 才能广播 5A 电流
+1: 无 emark 也可以广播 5A</td><td>R/W</td><td>0x0</td></tr><tr><td>5-0</td><td>Reserved
+注意不能修改默认值</td><td>R/W</td><td>0x30</td></tr></table>
+
+### 2.26. REG0xA8：广播电流配置
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7</td><td>PD PPS3 广播 5A 电流使能
+0: 不使能
+1: 使能，即强制广播 5A</td><td>R/W</td><td>0x0</td></tr><tr><td>6</td><td>Type-C 广播电流设置
+0: 有 PD 功率决定
+1: 固定广播 1.5A</td><td>R/W</td><td>0x0</td></tr><tr><td>5-0</td><td>Reserved
+注意不能修改默认值</td><td>R/W</td><td>0x0</td></tr></table>
+
+### 2.27. REG0xAB：异常保护配置
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-4</td><td>Reserved
+注意不能修改默认值</td><td>R/W</td><td>0x8</td></tr><tr><td>3-2</td><td>Die 过温保护门限
+0: 105℃
+1: 115℃
+2: 125℃
+3: 135℃</td><td>R/W</td><td>0x2</td></tr><tr><td>1-0</td><td>Reserved
+注意不能修改默认值</td><td>R/W</td><td>0x0</td></tr></table>
+
+### 2.28. REG0xAC：在线配置
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-3</td><td>Reserved</td><td>R/W</td><td>0x6</td></tr><tr><td>2</td><td>电流小于掉线门限的 debounce 时间
+0: 6~8s
+1: 3~4s</td><td>R/W</td><td>0x0</td></tr><tr><td>1-0</td><td>判别 A 口为在线的电流门限
+0: 200mA
+1: 100mA
+2: 300mA
+3: 400mA</td><td>R/W</td><td>0x2</td></tr></table>
+
+### 2.29. REG0xAD：快充配置0
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7</td><td>QC2.0/QC3.0/PD FIX 线补使能
+0: 使能
+1: 不使能</td><td>R/W</td><td>0x0</td></tr><tr><td>6-4</td><td>Reserved
+注意不能修改默认值</td><td>R/W</td><td>0x0</td></tr><tr><td>3</td><td>FCP/AFC/SFCP 协议的高压限流
+0: 3.25A
+1: 2.25A</td><td>R/W</td><td>0x0</td></tr><tr><td>2-1</td><td>Reserved
+注意不能修改默认值</td><td>R/W</td><td>0x0</td></tr><tr><td>0</td><td>PD 是否禁止 SCP 协议
+0: 不禁止，即处于 PD 协议时可以响应 SCP 请求</td><td>R/W</td><td>0x0</td></tr><tr><td></td><td>1: 禁止</td><td></td><td></td></tr></table>
+
+### 2.30. REG0xAE：快充配置1
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-6</td><td>Reserved
+注意不能修改默认值</td><td>R/W</td><td>0x3</td></tr><tr><td>5</td><td>调压支持的最低电压
+0: 最低电压为 3.0V
+1: 最低电压为 5.0V</td><td>R/W</td><td>0x0</td></tr><tr><td>4</td><td>协议支持 5V 以下电压
+0: 支持小于 5V 的电压
+1: 支持的最低电压为 5V</td><td>R/W</td><td>0x0</td></tr><tr><td>3</td><td>QC3.0 协议输出支持 20V 使能
+0: 使能
+1: 不使能</td><td>R/W</td><td>0x0</td></tr><tr><td>2</td><td>QC2.0 协议输出支持 20V 使能
+0: 不使能
+1: 使能</td><td>R/W</td><td>0x0</td></tr><tr><td>1</td><td>PE2.0 协议输出支持 20V 使能
+0: 不使能
+1: 使能</td><td>R/W</td><td>0x0</td></tr><tr><td>0</td><td>非 PD 协议输出支持 12V 使能
+0: 使能
+1: 不使能
+注意: 禁止 12V 时, 必须同时禁止 QC2.0/QC3.0/PE2.0 的 20V 输出</td><td>R/W</td><td>0x0</td></tr></table>
+
+### 2.31. REG0xAF：功率配置
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7</td><td>最大功率配置方式选择
+0: 外部电阻
+1: 寄存器</td><td>R/W</td><td>0x0</td></tr><tr><td>6-0</td><td>最大功率设置
+W/bit</td><td>R/W</td><td>0x0</td></tr></table>
+
+### 2.32. REG0xB0：快充配置2
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-6</td><td>Reserved</td><td>R/W</td><td>0x3</td></tr><tr><td></td><td>注意不能修改默认值</td><td></td><td></td></tr><tr><td>5</td><td>高压SCP协议使能
+0:使能高压SCP
+1:关闭高压SCP</td><td>R/W</td><td>0x0</td></tr><tr><td>4</td><td>低压SCP协议使能
+0:使能低压SCP
+1:关闭低压SCP</td><td>R/W</td><td>0x1</td></tr><tr><td>3</td><td>QC3.0使能
+0:使能
+1:不使能</td><td>R/W</td><td>0x0</td></tr><tr><td>2</td><td>QC2.0使能
+0:使能
+1:不使能</td><td>R/W</td><td>0x0</td></tr><tr><td>1</td><td>快充使能总开关
+0:使能
+1:不使能</td><td>R/W</td><td>0x0</td></tr><tr><td>0</td><td>BC1.2使能
+0:使能
+1:不使能
+注意:不使能BC1.2时,将不驱动DPDM,但DPDM保持短接</td><td>R/W</td><td>0x0</td></tr></table>
+
+### 2.33. REG 0xB1: 快充配置3
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td rowspan="2">7</td><td>Vin ADC 过压保护使能(高于 DAC 设定值 20%)</td><td rowspan="2">R/W</td><td rowspan="2">0x0</td></tr><tr><td>0: 使能
+1: 不使能</td></tr><tr><td>6</td><td>Vin 模拟过压保护使能(高于 DAC 设定值 2V)
+0: 使能
+1: 不使能</td><td>R/W</td><td>0x0</td></tr><tr><td>5</td><td>三星 1.2V 模式使能
+0: 使能
+1: 不使能</td><td>R/W</td><td>0x0</td></tr><tr><td>4</td><td>SFCP 协议使能
+0: 使能
+1: 不使能</td><td>R/W</td><td>0x0</td></tr><tr><td>3</td><td>FCP 使能
+0: 使能
+1: 不使能</td><td>R/W</td><td>0x0</td></tr><tr><td>2</td><td>AFC 使能
+0: 使能
+1: 不使能</td><td>R/W</td><td>0x0</td></tr><tr><td>1</td><td>PE 使能
+0: 使能
+1: 不使能</td><td>R/W</td><td>0x0</td></tr><tr><td>0</td><td>Reserved
+注意不能修改默认值</td><td>R/W</td><td>0x0</td></tr></table>
+
+### 2.34. REG 0xB2: 快充配置 4
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-6</td><td>Reserved
+注意不能修改默认值</td><td>R/W</td><td>0x0</td></tr><tr><td>5-4</td><td>SCP 协议广播的电流
+0: 5.0A
+1: 4.0A
+2: 2.0A
+3: Reserved</td><td>R/W</td><td>0x2</td></tr><tr><td>3</td><td>25w 时 9V PDO 的电流
+0: 2.78A
+1: 2.77A</td><td>R/W</td><td>0x1</td></tr><tr><td>2-0</td><td>Reserved
+注意不能修改默认值</td><td>R/W</td><td>0x1</td></tr></table>
+
+### 2.35. REG 0xB3: PD 配置 0
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7</td><td>功率在 60~70W 时是否需 Emarker 线
+0: 需要为 emarker 线
+1: 不需要为 emarker 线</td><td>R/W</td><td>0x0</td></tr><tr><td>6</td><td>收到非法 PD 请求的处理方式
+0: reject 非法请求
+1: 发 hardreset 并禁止 PPS</td><td>R/W</td><td>0x1</td></tr><tr><td>5</td><td>Reserved
+注意不要修改默认值</td><td>R/W</td><td>0x1</td></tr><tr><td>4</td><td>Emarker 检测使能
+0: 使能
+1: 不使能</td><td>R/W</td><td>0x0</td></tr><tr><td>3</td><td>PD dr_swap 命令支持
+0: 不支持
+1: 支持</td><td>R/W</td><td>0x0</td></tr><tr><td>2</td><td>PD vconn swap 命令支持
+0: 不支持
+1: 支持</td><td>R/W</td><td>0x1</td></tr><tr><td>1</td><td>Reserved
+注意不要修改默认值</td><td>R/W</td><td>0x0</td></tr><tr><td>0</td><td>PD 使能
+0: 使能
+1: 不使能</td><td>R/W</td><td>0x0</td></tr></table>
+
+### 2.36. REG 0xB4: PD 配置 1
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7</td><td>PPS0/PPS1/PPS2/PPS3 寄存器配置使能
+0: 自动配置
+1: 寄存器配置</td><td>R/W</td><td>0x0</td></tr><tr><td>6</td><td>PPS3 最大电流配置
+0: 5A
+1: 3A</td><td>R/W</td><td>0x0</td></tr><tr><td>5-4</td><td>Reserved
+注意不要修改默认值</td><td>R/W</td><td>0x0</td></tr><tr><td>3</td><td>PD discovery identity 命令支持
+0: 不支持
+1: 支持</td><td>R/W</td><td>0x0</td></tr><tr><td>2</td><td>PD discovery SVID 命令支持
+0: 不支持
+1: 支持</td><td>R/W</td><td>0x0</td></tr><tr><td>1-0</td><td>PD peak current 配置
+注意此值仅修改 PDO 中对应的项</td><td>R/W</td><td>0x0</td></tr></table>
+
+### 2.37. REG 0xB5: PD 配置 2
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7</td><td>3.3~21V PPS 使能(PPS3)
+0: 使能
+1: 不使能</td><td>R/W</td><td>0x0</td></tr><tr><td>6</td><td>3.3~16V PPS 使能(PPS2)
+0: 使能
+1: 不使能</td><td>R/W</td><td>0x0</td></tr><tr><td>5</td><td>3.3~11V PPS 使能(PPS1)
+0: 使能
+1: 不使能</td><td>R/W</td><td>0x0</td></tr><tr><td>4</td><td>3.3~5.9V PPS 使能(PPS0)
+0: 使能
+1: 不使能</td><td>R/W</td><td>0x0</td></tr><tr><td>3</td><td>PD fixed 20V 使能
+0: 使能
+1: 不使能</td><td>R/W</td><td>0x0</td></tr><tr><td>2</td><td>PD fixed 15V 使能
+0: 使能
+1: 不使能</td><td>R/W</td><td>0x0</td></tr><tr><td>1</td><td>PD fixed 12V 使能
+0: 使能
+1: 不使能</td><td>R/W</td><td>0x0</td></tr><tr><td>0</td><td>PD fixed 9V 使能
+0: 使能
+1: 不使能</td><td>R/W</td><td>0x0</td></tr></table>
+
+### 2.38. REG 0xB6:VID配置0
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-0</td><td>vendor ID 配置 VID[15:8]</td><td>R/W</td><td>0x0</td></tr></table>
+
+### 2.39. REG 0xB7:VID配置11
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-0</td><td>vendor ID 配置 VID[7:0]</td><td>R/W</td><td>0x0</td></tr></table>
+
+### 2.40. REG 0xB8:XID配置0
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-0</td><td>XID 配置 XID[31:24]</td><td>R/W</td><td>0x0</td></tr></table>
+
+### 2.41. REG 0xB9:XID配置1
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-0</td><td>XID 配置 XID[23:16]</td><td>R/W</td><td>0x0</td></tr></table>
+
+### 2.42. REG 0xBA:XID配置2
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-0</td><td>XID 配置 XID[15:8]</td><td>R/W</td><td>0x0</td></tr></table>
+
+### 2.43. REG 0xB: XID 配置 3
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-0</td><td>XID 配置 XID[7:0]</td><td>R/W</td><td>0x0</td></tr></table>
+
+### 2.44. REG 0xBC: PID 配置 0
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-0</td><td>PID 配置 PID[15:8]</td><td>R/W</td><td>0x0</td></tr></table>
+
+### 2.45. REG 0xBD: PID 配置 1
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-0</td><td>PID 配置 PID[7:0]</td><td>R/W</td><td>0x0</td></tr></table>
+
+### 2.46. REG 0xBE: SVID 配置 0
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-0</td><td>SVID 配置 SVID[15:8]</td><td>R/W</td><td>0x0</td></tr></table>
+
+### 2.47. REG 0xBF: SVID 配置 1
+
+<table><tr><td>Bit</td><td>Description</td><td>R/W</td><td>Default</td></tr><tr><td>7-0</td><td>SVID 配置 SVID[7:0]</td><td>R/W</td><td>0x0</td></tr></table>
+
+## 免责声明
 
 珠海智融科技股份有限公司（以下简称“智融科技”）可能随时对所提供的产品、服务及本文件作出修改或更新，且不另行通知。客户应在下订单前获取最新的相关信息，并确认这些信息是否完整且是最新的。
 
