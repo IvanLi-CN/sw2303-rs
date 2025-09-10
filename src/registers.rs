@@ -247,6 +247,28 @@ impl defmt::Format for ConnectionControlFlags {
 }
 
 bitflags! {
+    /// Force control flags (REG 0x16)
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub struct ForceControlFlags: u8 {
+        /// 强制开通路 (bit 3): 1=强制开通路
+        const FORCE_OPEN_PATH  = 0b00001000;
+        /// 强制关通路 (bit 2): 1=强制关通路
+        const FORCE_CLOSE_PATH = 0b00000100;
+        /// 强制控制 DAC (bit 1): 1=强制控制 dac vol
+        const FORCE_DAC        = 0b00000010;
+        /// 强制控制限流 (bit 0): 1=强制控制 ctr_ic
+        const FORCE_CURRENT    = 0b00000001;
+    }
+}
+
+#[cfg(feature = "defmt")]
+impl defmt::Format for ForceControlFlags {
+    fn format(&self, fmt: defmt::Formatter) {
+        defmt::write!(fmt, "ForceControlFlags({})", self.bits())
+    }
+}
+
+bitflags! {
     /// PD configuration 0 flags (REG 0xB3) - Based on official register manual
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct PdConfig0Flags: u8 {

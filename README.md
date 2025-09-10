@@ -138,25 +138,40 @@ where I2C::Error: core::fmt::Debug
 
 ### Individual Protocol Control
 
-```rust
-// Enable/disable specific protocols
-sw2303.enable_pd_protocol()?;
-sw2303.disable_pd_protocol()?;
+```rust,no_run
+use sw2303::{SW2303, ProtocolType, registers::constants::DEFAULT_ADDRESS};
+use embedded_hal::i2c::I2c;
 
-// Check protocol status
-if sw2303.is_protocol_enabled(ProtocolType::PD)? {
-    println!("PD protocol is enabled");
-}
+fn individual_control<I2C: I2c>(mut i2c: I2C) -> Result<(), sw2303::error::Error<I2C::Error>>
+where I2C::Error: core::fmt::Debug
+{
+    let mut sw2303 = SW2303::new(&mut i2c, DEFAULT_ADDRESS);
+    sw2303.init()?;
+    sw2303.unlock_write_enable_0()?;
 
-// Type-C current control
-sw2303.enable_type_c_1_5a()?;  // Enable 1.5A current broadcast
-sw2303.disable_type_c_1_5a()?; // Use default current
+    // Enable/disable specific protocols
+    sw2303.enable_pd_protocol()?;
+    sw2303.disable_pd_protocol()?;
 
-// Get overall protocol status
-let status = sw2303.get_protocol_status()?;
-if status.pd_enabled {
-    println!("PD is enabled");
-}
+    // Check protocol status
+    if sw2303.is_protocol_enabled(ProtocolType::PD)? {
+        println!("PD protocol is enabled");
+    }
+
+    // Type-C current control
+    sw2303.enable_type_c_1_5a()?;  // Enable 1.5A current broadcast
+    sw2303.disable_type_c_1_5a()?; // Use default current
+
+    // Get overall protocol status
+    let status = sw2303.get_protocol_status()?;
+    if status.pd_enabled {
+        println!("PD is enabled");
+    }
+
+    // Read ADC values
+    let vin_raw = sw2303.read_adc_vin()?;
+    let vbus_raw = sw2303.read_adc_vbus()?;
+    let ich_raw = sw2303.read_adc_ich()?;
     let tdiet_raw = sw2303.read_adc_tdiet()?;
 
     // Convert ADC values using official conversion factors
@@ -165,6 +180,7 @@ if status.pd_enabled {
     let vbus_mv = vbus_raw as f32 * adc::VBUS_FACTOR_MV;
     let ich_ma = ich_raw as f32 * adc::ICH_FACTOR_MA;
     let tdiet_c = tdiet_raw as f32 * adc::TDIET_FACTOR_C;
+
     Ok(())
 }
 ```

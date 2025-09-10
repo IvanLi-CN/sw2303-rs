@@ -6,10 +6,10 @@
 use crate::data_types::{PdConfiguration, ProtocolConfiguration, ProtocolType, TypeCConfiguration};
 use crate::error::Error;
 use crate::registers::{
-    BroadcastCurrentFlags, FastChargeConfig0Flags, FastChargeConfig1Flags, FastChargeConfig2Flags,
-    FastChargeConfig3Flags, FastChargeConfig4Flags, FastChargingFlags, PdConfig0Flags,
-    PdConfig1Flags, PdConfig2Flags, PdConfig3Flags, Register, SystemStatus0Flags,
-    SystemStatus1Flags, SystemStatus2Flags, SystemStatus3Flags, constants,
+    BroadcastCurrentFlags, ConnectionControlFlags, FastChargeConfig0Flags, FastChargeConfig1Flags,
+    FastChargeConfig2Flags, FastChargeConfig3Flags, FastChargeConfig4Flags, FastChargingFlags,
+    ForceControlFlags, PdConfig0Flags, PdConfig1Flags, PdConfig2Flags, PdConfig3Flags, Register,
+    SystemStatus0Flags, SystemStatus1Flags, SystemStatus2Flags, SystemStatus3Flags, constants,
 };
 
 #[cfg(not(feature = "async"))]
@@ -290,6 +290,53 @@ where
     /// Returns `Ok(u8)` with the raw ADC value, or an `Error` if the operation fails.
     pub async fn read_adc_tdiet(&mut self) -> Result<u8, Error<I2C::Error>> {
         self.read_register(Register::AdcTdiet).await
+    }
+
+    // ========================================================================
+    // ADC 12-bit convenience APIs (REG 0x3B select + 0x3C/0x3D read)
+    // ========================================================================
+
+    async fn adc_select_12bit(&mut self, sel: u8) -> Result<(), Error<I2C::Error>> {
+        // Bits 2-0: 1=vin, 2=vbus, 3=ich, 4=tdiet
+        self.write_register(Register::AdcConfig, sel & 0x07).await
+    }
+
+    async fn adc_read_12bit_raw(&mut self) -> Result<u16, Error<I2C::Error>> {
+        let high = self.read_register(Register::AdcDataHigh).await?;
+        let low = self.read_register(Register::AdcDataLow).await? & 0x0F;
+        Ok(((high as u16) << 4) | (low as u16))
+    }
+
+    /// Read Vin in mV using 12-bit ADC path.
+    pub async fn read_vin_mv_12bit(&mut self) -> Result<u32, Error<I2C::Error>> {
+        self.adc_select_12bit(constants::adc::ADC_SELECT_VIN)
+            .await?;
+        let raw = self.adc_read_12bit_raw().await? as u32;
+        Ok((constants::adc::VIN_FACTOR_12BIT_MV * raw as f32) as u32)
+    }
+
+    /// Read Vbus in mV using 12-bit ADC path.
+    pub async fn read_vbus_mv_12bit(&mut self) -> Result<u32, Error<I2C::Error>> {
+        self.adc_select_12bit(constants::adc::ADC_SELECT_VBUS)
+            .await?;
+        let raw = self.adc_read_12bit_raw().await? as u32;
+        Ok((constants::adc::VBUS_FACTOR_12BIT_MV * raw as f32) as u32)
+    }
+
+    /// Read Ich in mA using 12-bit ADC path.
+    pub async fn read_ich_ma_12bit(&mut self) -> Result<u32, Error<I2C::Error>> {
+        self.adc_select_12bit(constants::adc::ADC_SELECT_ICH)
+            .await?;
+        let raw = self.adc_read_12bit_raw().await? as u32;
+        Ok((constants::adc::ICH_FACTOR_12BIT_MA * raw as f32) as u32)
+    }
+
+    /// Read die temperature in Celsius (approx) using 12-bit ADC path.
+    pub async fn read_tdie_c_12bit(&mut self) -> Result<f32, Error<I2C::Error>> {
+        self.adc_select_12bit(constants::adc::ADC_SELECT_TDIET)
+            .await?;
+        let raw = self.adc_read_12bit_raw().await? as f32;
+        Ok((raw - constants::adc::TDIET_OFFSET) / constants::adc::TDIET_DIVISOR)
     }
 
     /// Set the power configuration using REG 0xAF.
@@ -711,6 +758,130 @@ where
     ) -> Result<FastChargeConfig3Flags, Error<I2C::Error>> {
         let value = self.read_register(Register::FastChargingConfig3).await?;
         Ok(FastChargeConfig3Flags::from_bits_truncate(value))
+    }
+
+    // ========================================================================
+    // Identity fields: VID/PID/SVID/XID (REG 0xB6..0xBF)
+    // ========================================================================
+
+    /// Set USB-IF Vendor ID (VID). Requires unlock_write_enable_0().
+    pub async fn set_vid(&mut self, vid: u16) -> Result<(), Error<I2C::Error>> {
+        self.write_register(Register::VidConfig0, (vid >> 8) as u8)
+            .await?;
+        self.write_register(Register::VidConfig1, (vid & 0xFF) as u8)
+            .await
+    }
+
+    /// Read VID.
+    pub async fn get_vid(&mut self) -> Result<u16, Error<I2C::Error>> {
+        let hi = self.read_register(Register::VidConfig0).await? as u16;
+        let lo = self.read_register(Register::VidConfig1).await? as u16;
+        Ok((hi << 8) | lo)
+    }
+
+    /// Set Product ID (PID). Requires unlock_write_enable_0().
+    pub async fn set_pid(&mut self, pid: u16) -> Result<(), Error<I2C::Error>> {
+        self.write_register(Register::PidConfig0, (pid >> 8) as u8)
+            .await?;
+        self.write_register(Register::PidConfig1, (pid & 0xFF) as u8)
+            .await
+    }
+
+    /// Read PID.
+    pub async fn get_pid(&mut self) -> Result<u16, Error<I2C::Error>> {
+        let hi = self.read_register(Register::PidConfig0).await? as u16;
+        let lo = self.read_register(Register::PidConfig1).await? as u16;
+        Ok((hi << 8) | lo)
+    }
+
+    /// Set SVID. Requires unlock_write_enable_0().
+    pub async fn set_svid(&mut self, svid: u16) -> Result<(), Error<I2C::Error>> {
+        self.write_register(Register::SvidConfig0, (svid >> 8) as u8)
+            .await?;
+        self.write_register(Register::SvidConfig1, (svid & 0xFF) as u8)
+            .await
+    }
+
+    /// Read SVID.
+    pub async fn get_svid(&mut self) -> Result<u16, Error<I2C::Error>> {
+        let hi = self.read_register(Register::SvidConfig0).await? as u16;
+        let lo = self.read_register(Register::SvidConfig1).await? as u16;
+        Ok((hi << 8) | lo)
+    }
+
+    /// Set XID (32-bit). Requires unlock_write_enable_0().
+    pub async fn set_xid(&mut self, xid: u32) -> Result<(), Error<I2C::Error>> {
+        self.write_register(Register::XidConfig0, ((xid >> 24) & 0xFF) as u8)
+            .await?;
+        self.write_register(Register::XidConfig1, ((xid >> 16) & 0xFF) as u8)
+            .await?;
+        self.write_register(Register::XidConfig2, ((xid >> 8) & 0xFF) as u8)
+            .await?;
+        self.write_register(Register::XidConfig3, (xid & 0xFF) as u8)
+            .await
+    }
+
+    /// Read XID (32-bit).
+    pub async fn get_xid(&mut self) -> Result<u32, Error<I2C::Error>> {
+        let b3 = self.read_register(Register::XidConfig3).await? as u32;
+        let b2 = self.read_register(Register::XidConfig2).await? as u32;
+        let b1 = self.read_register(Register::XidConfig1).await? as u32;
+        let b0 = self.read_register(Register::XidConfig0).await? as u32;
+        Ok((b0 << 24) | (b1 << 16) | (b2 << 8) | b3)
+    }
+
+    // ========================================================================
+    // Force control (REG 0x16) — requires unlock_write_enable_1() before write
+    // ========================================================================
+
+    /// Get force control raw flags.
+    pub async fn get_force_control_raw(&mut self) -> Result<ForceControlFlags, Error<I2C::Error>> {
+        let v = self.read_register(Register::ForceControlEnable).await?;
+        Ok(ForceControlFlags::from_bits_truncate(v))
+    }
+
+    /// Set force control raw flags.
+    pub async fn set_force_control_raw(
+        &mut self,
+        flags: ForceControlFlags,
+    ) -> Result<(), Error<I2C::Error>> {
+        self.write_register(Register::ForceControlEnable, flags.bits())
+            .await
+    }
+
+    /// Force open/close path
+    pub async fn force_path(&mut self, open: bool) -> Result<(), Error<I2C::Error>> {
+        let mut f = self.get_force_control_raw().await?;
+        // Clear both bits first
+        f.remove(ForceControlFlags::FORCE_OPEN_PATH | ForceControlFlags::FORCE_CLOSE_PATH);
+        if open {
+            f.insert(ForceControlFlags::FORCE_OPEN_PATH);
+        } else {
+            f.insert(ForceControlFlags::FORCE_CLOSE_PATH);
+        }
+        self.set_force_control_raw(f).await
+    }
+
+    /// Force DAC control enable/disable
+    pub async fn force_dac(&mut self, enable: bool) -> Result<(), Error<I2C::Error>> {
+        let mut f = self.get_force_control_raw().await?;
+        if enable {
+            f.insert(ForceControlFlags::FORCE_DAC);
+        } else {
+            f.remove(ForceControlFlags::FORCE_DAC);
+        }
+        self.set_force_control_raw(f).await
+    }
+
+    /// Force current limit control enable/disable
+    pub async fn force_current_limit(&mut self, enable: bool) -> Result<(), Error<I2C::Error>> {
+        let mut f = self.get_force_control_raw().await?;
+        if enable {
+            f.insert(ForceControlFlags::FORCE_CURRENT);
+        } else {
+            f.remove(ForceControlFlags::FORCE_CURRENT);
+        }
+        self.set_force_control_raw(f).await
     }
 
     /// Set fast charging configuration 4 register (REG 0xB2) raw flags.
@@ -1220,8 +1391,10 @@ where
 
         // Configure CC line control if needed
         if config.cc_un_driving {
-            // Note: This would require access to REG 0x14 which may need additional implementation
-            // For now, we'll skip this as it's not in the main configuration registers
+            // Trigger CC un-driving pulse
+            let mut cc = self.get_connection_control_raw().await?;
+            cc.insert(ConnectionControlFlags::CC_UN_DRIVING);
+            self.set_connection_control_raw(cc).await?;
         }
 
         Ok(())
@@ -1239,11 +1412,52 @@ where
         Ok(TypeCConfiguration {
             current_1_5a: flags.contains(BroadcastCurrentFlags::TYPE_C_1_5A),
             pd_pps_5a: flags.contains(BroadcastCurrentFlags::PD_PPS_5A),
-            cc_un_driving: false, // Would need REG 0x14 to read this
+            cc_un_driving: false, // pulse-only
         })
     }
 
     // Type‑C 状态寄存器 (0x0A) 未在已校对文档中提供稳定位义，暂不暴露。
+
+    // ========================================================================
+    // Connection control (REG 0x14)
+    // ========================================================================
+
+    /// Get connection control raw flags.
+    pub async fn get_connection_control_raw(
+        &mut self,
+    ) -> Result<ConnectionControlFlags, Error<I2C::Error>> {
+        let v = self.read_register(Register::ConnectionControl).await?;
+        Ok(ConnectionControlFlags::from_bits_truncate(v))
+    }
+
+    /// Set connection control raw flags (RMW recommended by caller).
+    pub async fn set_connection_control_raw(
+        &mut self,
+        flags: ConnectionControlFlags,
+    ) -> Result<(), Error<I2C::Error>> {
+        self.write_register(Register::ConnectionControl, flags.bits())
+            .await
+    }
+
+    /// Enable or disable line compensation (0: enable/open, 1: close/disable).
+    /// Requires unlock_write_enable_0() called beforehand.
+    pub async fn set_line_compensation(&mut self, enable: bool) -> Result<(), Error<I2C::Error>> {
+        let mut cc = self.get_connection_control_raw().await?;
+        if enable {
+            cc.remove(ConnectionControlFlags::LINE_COMPENSATION_CLOSE);
+        } else {
+            cc.insert(ConnectionControlFlags::LINE_COMPENSATION_CLOSE);
+        }
+        self.set_connection_control_raw(cc).await
+    }
+
+    /// Trigger CC un-driving pulse; auto clears after ~1s.
+    /// Requires unlock_write_enable_0() called beforehand.
+    pub async fn trigger_cc_un_driving(&mut self) -> Result<(), Error<I2C::Error>> {
+        let mut cc = self.get_connection_control_raw().await?;
+        cc.insert(ConnectionControlFlags::CC_UN_DRIVING);
+        self.set_connection_control_raw(cc).await
+    }
 
     /// Enable Type-C 1.5A current broadcast.
     ///
