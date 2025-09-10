@@ -155,7 +155,7 @@ pub struct DeviceInfo {
 }
 
 /// Interrupt configuration for the SW2303.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct InterruptConfig {
     /// Enable port connection change interrupts.
@@ -170,17 +170,7 @@ pub struct InterruptConfig {
     pub reset_change: bool,
 }
 
-impl Default for InterruptConfig {
-    fn default() -> Self {
-        Self {
-            connection_change: false,
-            enable_change: false,
-            suspend_change: false,
-            overcurrent_change: false,
-            reset_change: false,
-        }
-    }
-}
+// Default derived above
 
 /// Protocol type enumeration for SW2303 charging protocols.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -207,7 +197,7 @@ pub enum ProtocolType {
 }
 
 /// Overall protocol configuration for SW2303.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct ProtocolConfiguration {
     /// Whether PD protocol is enabled
@@ -230,21 +220,7 @@ pub struct ProtocolConfiguration {
     pub sfcp_enabled: bool,
 }
 
-impl Default for ProtocolConfiguration {
-    fn default() -> Self {
-        Self {
-            pd_enabled: false,
-            qc20_enabled: false,
-            qc30_enabled: false,
-            fcp_enabled: false,
-            afc_enabled: false,
-            scp_enabled: false,
-            pe20_enabled: false,
-            bc12_enabled: false,
-            sfcp_enabled: false,
-        }
-    }
-}
+// Default derived above
 
 /// PD-specific configuration for SW2303.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -337,7 +313,7 @@ impl Default for FastChargeConfiguration {
 }
 
 /// Type-C configuration for SW2303.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct TypeCConfiguration {
     /// Type-C current broadcast (false: default current, true: 1.5A)
@@ -348,12 +324,4 @@ pub struct TypeCConfiguration {
     pub cc_un_driving: bool,
 }
 
-impl Default for TypeCConfiguration {
-    fn default() -> Self {
-        Self {
-            current_1_5a: false, // Default current
-            pd_pps_5a: false,
-            cc_un_driving: false, // Normal operation
-        }
-    }
-}
+// Default derived above

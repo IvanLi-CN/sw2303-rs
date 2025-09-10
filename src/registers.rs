@@ -548,11 +548,9 @@ pub mod constants {
     }
 
     /// ADC configuration constants
-    ///
     /// These values are verified against the official SW2303 register manual.
     pub mod adc {
         /// ADC conversion factors (verified from official datasheet)
-
         /// REG 0x30: Vin ADC conversion factor (8-bit direct read)
         /// Datasheet note: 8-bit path uses 7.5*16 mV/LSB; when using 12-bit via 0x3B
         /// selection, the factor is 7.5 mV/LSB (read from 0x3C/0x3D).
@@ -686,7 +684,6 @@ pub mod constants {
     /// and are based on the official register manual.
     pub mod fast_charge {
         /// Current limits for different protocols
-
         /// FCP/AFC/SFCP current limits from REG 0xAD bit 3
         /// 0: 3.25A, 1: 2.25A
         pub const FCP_AFC_SFCP_CURRENT_3_25A: u16 = 3250;
