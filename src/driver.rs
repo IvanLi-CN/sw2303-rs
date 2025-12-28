@@ -1457,9 +1457,13 @@ where
         self.set_pd_config_2_raw(config2).await?;
 
         // Configure PD Config 3 (REG 0xA6)
-        let mut config3 = PdConfig3Flags::empty();
+        // IMPORTANT: REG 0xA6 has reserved bits with non‑zero defaults (bit7=1, bits5‑0=0x30).
+        // Always preserve them by read‑modify‑write.
+        let mut config3 = self.get_pd_config_3_raw().await?;
         if config.emark_5a_bypass {
             config3.insert(PdConfig3Flags::EMARK_5A_BYPASS);
+        } else {
+            config3.remove(PdConfig3Flags::EMARK_5A_BYPASS);
         }
         self.set_pd_config_3_raw(config3).await?;
 

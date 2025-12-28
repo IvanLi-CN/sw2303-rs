@@ -132,6 +132,9 @@ fn test_protocol_configuration_basic() {
 #[test]
 fn test_pd_configuration() {
     let mut i2c = MockI2c::new();
+    // REG 0xA6 has reserved bits with non‑zero defaults (bit7=1, bits5‑0=0x30).
+    // Seed a realistic value to ensure configure_pd preserves reserved bits via RMW.
+    i2c.set_register(0xA6, 0xB0);
     let mut sw2303 = SW2303::new(&mut i2c, DEFAULT_ADDRESS);
 
     // Initialize and unlock
@@ -152,6 +155,26 @@ fn test_pd_configuration() {
 
     let result = sw2303.configure_pd(pd_config);
     assert!(result.is_ok());
+
+    // emark_5a_bypass=false should keep the seeded reserved bits intact.
+    let pd_cfg3 = sw2303.get_pd_config_3_raw().unwrap();
+    assert_eq!(pd_cfg3.bits(), 0xB0);
+
+    // Now enable bypass and ensure only bit6 changes.
+    let pd_config_bypass = PdConfiguration {
+        enabled: true,
+        vconn_swap: true,
+        dr_swap: false,
+        emarker_enabled: true,
+        pps_enabled: true,
+        fixed_voltages: [true, true, false, false],
+        emark_5a_bypass: true,
+        emarker_60_70w: true,
+    };
+    let result = sw2303.configure_pd(pd_config_bypass);
+    assert!(result.is_ok());
+    let pd_cfg3 = sw2303.get_pd_config_3_raw().unwrap();
+    assert_eq!(pd_cfg3.bits(), 0xF0);
 }
 
 #[test]
