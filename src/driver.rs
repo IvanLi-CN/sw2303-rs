@@ -1332,8 +1332,8 @@ where
             pe20_enabled: !config3.contains(FastChargeConfig3Flags::PE_DISABLE),
             sfcp_enabled: !config3.contains(FastChargeConfig3Flags::SFCP_DISABLE),
             bc12_enabled: !config2.contains(FastChargeConfig2Flags::BC12_DISABLE),
-            scp_current_limit: ((config4.bits() & FastChargeConfig4Flags::SCP_CURRENT_MASK.bits())
-                >> 4) as u8,
+            scp_current_limit: (config4.bits() & FastChargeConfig4Flags::SCP_CURRENT_MASK.bits())
+                >> 4,
             fcp_afc_sfcp_2_25a: config0.contains(FastChargeConfig0Flags::FCP_AFC_SFCP_2_25A),
             qc20_20v_enabled: config1.contains(FastChargeConfig1Flags::QC20_20V_ENABLE),
             qc30_20v_enabled: !config1.contains(FastChargeConfig1Flags::QC30_20V_DISABLE),
