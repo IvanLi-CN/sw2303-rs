@@ -121,16 +121,24 @@ fn test_current_limit_encoding_decoding_50ma_units() {
         let mut sw2303 = SW2303::new(&mut i2c, DEFAULT_ADDRESS);
         sw2303.init().unwrap();
 
-        sw2303.set_current_limit_ma(2500).unwrap(); // 50 * 50mA
+        // Manual: 1000mA + ctrl_icc[6:0] * 50mA
+        // 2500mA -> ctrl_icc = (2500 - 1000) / 50 = 30
+        sw2303.set_current_limit_ma(2500).unwrap();
 
         let i = sw2303.get_current_limit_ma().unwrap();
         assert_eq!(i, 2500);
+
+        let err = sw2303.set_current_limit_ma(950).unwrap_err();
+        assert!(matches!(err, Error::InvalidParameter));
+
+        let err = sw2303.set_current_limit_ma(1025).unwrap_err();
+        assert!(matches!(err, Error::InvalidParameter));
 
         let err = sw2303.set_current_limit_ma(10_000).unwrap_err();
         assert!(matches!(err, Error::InvalidParameter));
     }
 
-    assert_eq!(i2c.get_register(0x05), 0xB2);
+    assert_eq!(i2c.get_register(0x05), 0x9E);
 }
 
 #[test]
@@ -139,8 +147,9 @@ fn test_get_power_request_decoding() {
     // 5000mV encoded as REG0x03=0x1F, REG0x04[7:4]=0x4
     i2c.set_register(0x03, 0x1F);
     i2c.set_register(0x04, 0x4A);
-    // 2500mA -> units=50 -> 0x32 in bits[6:0]
-    i2c.set_register(0x05, 0x80 | 0x32);
+    // Manual: 1000mA + ctrl_icc[6:0] * 50mA
+    // 2500mA -> ctrl_icc = (2500 - 1000) / 50 = 30 -> 0x1E in bits[6:0]
+    i2c.set_register(0x05, 0x80 | 0x1E);
 
     let mut sw2303 = SW2303::new(&mut i2c, DEFAULT_ADDRESS);
     sw2303.init().unwrap();
@@ -153,6 +162,18 @@ fn test_get_power_request_decoding() {
             current_limit_ma: 2500
         }
     );
+}
+
+#[test]
+fn test_get_chip_version() {
+    let mut i2c = MockI2c::new();
+    i2c.set_register(0x01, 0b1010_0011);
+
+    let mut sw2303 = SW2303::new(&mut i2c, DEFAULT_ADDRESS);
+    sw2303.init().unwrap();
+
+    let version = sw2303.get_chip_version().unwrap();
+    assert_eq!(version, 0x03);
 }
 
 #[test]

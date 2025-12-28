@@ -222,15 +222,25 @@ where
 
     /// Set the output current limit.
     ///
-    /// Manual: `ctrl_icc[6:0] * 50mA` (REG 0x05[6:0]). Bit 7 is preserved.
+    /// Manual: `1000mA + ctrl_icc[6:0] * 50mA` (REG 0x05[6:0]). Bit 7 is preserved.
     pub async fn set_current_limit_ma(&mut self, current_ma: u16) -> Result<(), Error<I2C::Error>> {
-        let units = current_ma / 50;
-        if units > 0x7F {
+        const BASE_MA: u16 = 1000;
+        const STEP_MA: u16 = 50;
+
+        let delta = current_ma
+            .checked_sub(BASE_MA)
+            .ok_or(Error::InvalidParameter)?;
+        if delta % STEP_MA != 0 {
+            return Err(Error::InvalidParameter);
+        }
+
+        let ctrl_icc = delta / STEP_MA;
+        if ctrl_icc > 0x7F {
             return Err(Error::InvalidParameter);
         }
 
         let cur = self.read_register(Register::CurrentLimit).await?;
-        let value = (cur & 0x80) | (units as u8 & 0x7F);
+        let value = (cur & 0x80) | (ctrl_icc as u8 & 0x7F);
         self.write_register(Register::CurrentLimit, value).await?;
         Ok(())
     }
@@ -238,7 +248,8 @@ where
     /// Get the current output current limit setpoint in milliamps.
     pub async fn get_current_limit_ma(&mut self) -> Result<u16, Error<I2C::Error>> {
         let v = self.read_register(Register::CurrentLimit).await?;
-        Ok(((v & 0x7F) as u16).saturating_mul(50))
+        const BASE_MA: u16 = 1000;
+        Ok(BASE_MA + ((v & 0x7F) as u16).saturating_mul(50))
     }
 
     /// Get current voltage/current setpoints from registers (decoded).
@@ -247,6 +258,14 @@ where
             voltage_mv: self.get_voltage().await?,
             current_limit_ma: self.get_current_limit_ma().await?,
         })
+    }
+
+    /// Get chip version.
+    ///
+    /// Manual: REG 0x01 bits[1:0].
+    pub async fn get_chip_version(&mut self) -> Result<u8, Error<I2C::Error>> {
+        let v = self.read_register(Register::ChipVersion).await?;
+        Ok(v & 0x03)
     }
 
     /// Check if a sink device is connected (online status).
