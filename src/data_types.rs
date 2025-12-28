@@ -288,7 +288,7 @@ pub struct FastChargeConfiguration {
     pub qc30_20v_enabled: bool,
     /// Whether to enable 20V output for PE2.0
     pub pe20_20v_enabled: bool,
-    /// Whether to enable 12V output for PD
+    /// Whether to allow 12V output for non‑PD protocols
     pub pd_12v_enabled: bool,
 }
 
@@ -325,3 +325,13 @@ pub struct TypeCConfiguration {
 }
 
 // Default derived above
+
+/// Requested output settings (setpoints) for SW2303.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct PowerRequest {
+    /// Output voltage setpoint in millivolts.
+    pub voltage_mv: u16,
+    /// Output current limit setpoint in milliamps.
+    pub current_limit_ma: u16,
+}

@@ -3,7 +3,7 @@
 //! This module contains tests for the protocol configuration functionality
 //! of the SW2303 USB PD controller driver.
 
-#![cfg(test)]
+#![cfg(all(test, not(feature = "async")))]
 
 use embedded_hal::i2c::{ErrorKind, ErrorType, I2c, Operation};
 use std::collections::HashMap;

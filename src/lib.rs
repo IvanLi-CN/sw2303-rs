@@ -46,6 +46,7 @@
 //! use sw2303::{SW2303, ProtocolConfiguration, PdConfiguration, registers::constants::DEFAULT_ADDRESS};
 //! use embedded_hal::i2c::I2c;
 //!
+//! # #[cfg(not(feature = "async"))]
 //! # fn example<I2C: I2c>(mut i2c: I2C) -> Result<(), sw2303::error::Error<I2C::Error>>
 //! # where I2C::Error: core::fmt::Debug
 //! # {

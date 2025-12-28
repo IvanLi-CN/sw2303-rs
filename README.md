@@ -46,6 +46,7 @@ sw2303 = { version = "0.1.0", features = ["async", "defmt"] }
 use sw2303::{SW2303, registers::constants::DEFAULT_ADDRESS};
 use embedded_hal::i2c::I2c;
 
+#[cfg(not(feature = "async"))]
 fn example<I2C: I2c>(mut i2c: I2C) -> Result<(), sw2303::error::Error<I2C::Error>>
 where I2C::Error: core::fmt::Debug
 {
@@ -74,6 +75,7 @@ where I2C::Error: core::fmt::Debug
 use sw2303::{SW2303, ProtocolConfiguration, PdConfiguration, TypeCConfiguration, ProtocolType, registers::constants::DEFAULT_ADDRESS};
 use embedded_hal::i2c::I2c;
 
+#[cfg(not(feature = "async"))]
 fn configure_protocols<I2C: I2c>(mut i2c: I2C) -> Result<(), sw2303::error::Error<I2C::Error>>
 where I2C::Error: core::fmt::Debug
 {
@@ -142,6 +144,7 @@ where I2C::Error: core::fmt::Debug
 use sw2303::{SW2303, ProtocolType, registers::constants::DEFAULT_ADDRESS};
 use embedded_hal::i2c::I2c;
 
+#[cfg(not(feature = "async"))]
 fn individual_control<I2C: I2c>(mut i2c: I2C) -> Result<(), sw2303::error::Error<I2C::Error>>
 where I2C::Error: core::fmt::Debug
 {

@@ -3,7 +3,10 @@
 //! SW2303 is a USB PD (Power Delivery) charging controller, not a USB hub controller.
 //! This driver provides methods to interact with the SW2303 for UFP detection and charging management.
 
-use crate::data_types::{PdConfiguration, ProtocolConfiguration, ProtocolType, TypeCConfiguration};
+use crate::data_types::{
+    FastChargeConfiguration, PdConfiguration, PowerRequest, ProtocolConfiguration, ProtocolType,
+    TypeCConfiguration,
+};
 use crate::error::Error;
 use crate::registers::{
     BroadcastCurrentFlags, ConnectionControlFlags, FastChargeConfig0Flags, FastChargeConfig1Flags,
@@ -182,10 +185,18 @@ where
     ///
     /// Returns `Ok(())` on success, or an `Error` if the operation fails.
     pub async fn set_voltage(&mut self, voltage_mv: u16) -> Result<(), Error<I2C::Error>> {
-        // Convert voltage from mV to register value (assuming 100mV per unit)
-        let voltage_units = voltage_mv / 100;
-        let voltage_high = (voltage_units >> 8) as u8;
-        let voltage_low = (voltage_units & 0x0F) as u8;
+        // Manual: dac_vol[11:0] * 10mV
+        let dac_vol = voltage_mv / 10;
+        if dac_vol > 0x0FFF {
+            return Err(Error::InvalidParameter);
+        }
+
+        let voltage_high = (dac_vol >> 4) as u8; // REG 0x03: [11:4]
+        let voltage_low_nibble = (dac_vol & 0x0F) as u8; // REG 0x04[7:4]: [3:0]
+
+        // Preserve REG 0x04[3:0] reserved bits
+        let low_cur = self.read_register(Register::VoltageLow).await?;
+        let voltage_low = (low_cur & 0x0F) | (voltage_low_nibble << 4);
 
         self.write_register(Register::VoltageHigh, voltage_high)
             .await?;
@@ -204,9 +215,38 @@ where
         let voltage_high = self.read_register(Register::VoltageHigh).await?;
         let voltage_low = self.read_register(Register::VoltageLow).await?;
 
-        let voltage_units = ((voltage_high as u16) << 8) | (voltage_low as u16);
-        // Use saturating multiplication to prevent overflow
-        Ok(voltage_units.saturating_mul(100)) // Convert back to mV
+        // Manual: REG 0x03 -> dac_vol[11:4], REG 0x04[7:4] -> dac_vol[3:0]
+        let dac_vol = ((voltage_high as u16) << 4) | ((voltage_low as u16) >> 4);
+        Ok(dac_vol.saturating_mul(10))
+    }
+
+    /// Set the output current limit.
+    ///
+    /// Manual: `ctrl_icc[6:0] * 50mA` (REG 0x05[6:0]). Bit 7 is preserved.
+    pub async fn set_current_limit_ma(&mut self, current_ma: u16) -> Result<(), Error<I2C::Error>> {
+        let units = current_ma / 50;
+        if units > 0x7F {
+            return Err(Error::InvalidParameter);
+        }
+
+        let cur = self.read_register(Register::CurrentLimit).await?;
+        let value = (cur & 0x80) | (units as u8 & 0x7F);
+        self.write_register(Register::CurrentLimit, value).await?;
+        Ok(())
+    }
+
+    /// Get the current output current limit setpoint in milliamps.
+    pub async fn get_current_limit_ma(&mut self) -> Result<u16, Error<I2C::Error>> {
+        let v = self.read_register(Register::CurrentLimit).await?;
+        Ok(((v & 0x7F) as u16).saturating_mul(50))
+    }
+
+    /// Get current voltage/current setpoints from registers (decoded).
+    pub async fn get_power_request(&mut self) -> Result<PowerRequest, Error<I2C::Error>> {
+        Ok(PowerRequest {
+            voltage_mv: self.get_voltage().await?,
+            current_limit_ma: self.get_current_limit_ma().await?,
+        })
     }
 
     /// Check if a sink device is connected (online status).
@@ -337,6 +377,23 @@ where
             .await?;
         let raw = self.adc_read_12bit_raw().await? as f32;
         Ok((raw - constants::adc::TDIET_OFFSET) / constants::adc::TDIET_DIVISOR)
+    }
+
+    /// Read die temperature in Celsius using best available path.
+    ///
+    /// Prefer the calibrated 12-bit path; falls back to 8-bit approximation
+    /// when only the raw 8-bit value is available.
+    pub async fn read_tdie_c(&mut self) -> Result<f32, Error<I2C::Error>> {
+        // Use 12-bit calibrated method; same I2C cost as 8-bit and more accurate
+        self.read_tdie_c_12bit().await
+    }
+
+    /// Read die temperature in Celsius using 8-bit path with approximation.
+    /// Formula derived from 12-bit: T = (16*t8 - 1848) / 6.72
+    pub async fn read_tdie_c_8bit(&mut self) -> Result<f32, Error<I2C::Error>> {
+        let t8 = self.read_adc_tdiet().await? as f32;
+        let t = (16.0 * t8 - constants::adc::TDIET_OFFSET) / constants::adc::TDIET_DIVISOR;
+        Ok(t)
     }
 
     /// Set the power configuration using REG 0xAF.
@@ -1132,6 +1189,157 @@ where
         self.set_fast_charge_config_3_raw(config3).await?;
 
         Ok(())
+    }
+
+    /// Configure fast charging (QC/FCP/AFC/SCP/PE/SFCP/BC1.2) with structured settings.
+    ///
+    /// This method updates related fast-charge registers (0xAD/0xAE/0xB0/0xB1/0xB2) using a
+    /// read‑modify‑write strategy to preserve reserved bits.
+    ///
+    /// Requires `unlock_write_enable_0()` to be called first.
+    pub async fn configure_fast_charge(
+        &mut self,
+        config: FastChargeConfiguration,
+    ) -> Result<(), Error<I2C::Error>> {
+        if config.scp_current_limit > 2 {
+            return Err(Error::InvalidParameter);
+        }
+
+        // REG 0xAD: current limit and PD/SCP interaction (other bits preserved)
+        let mut config0 = self.get_fast_charge_config_0_raw().await?;
+        if config.fcp_afc_sfcp_2_25a {
+            config0.insert(FastChargeConfig0Flags::FCP_AFC_SFCP_2_25A);
+        } else {
+            config0.remove(FastChargeConfig0Flags::FCP_AFC_SFCP_2_25A);
+        }
+        self.set_fast_charge_config_0_raw(config0).await?;
+
+        // REG 0xAE: voltage capability bits (other bits preserved)
+        let mut config1 = self.get_fast_charge_config_1_raw().await?;
+        if config.qc30_20v_enabled {
+            config1.remove(FastChargeConfig1Flags::QC30_20V_DISABLE);
+        } else {
+            config1.insert(FastChargeConfig1Flags::QC30_20V_DISABLE);
+        }
+        if config.qc20_20v_enabled {
+            config1.insert(FastChargeConfig1Flags::QC20_20V_ENABLE);
+        } else {
+            config1.remove(FastChargeConfig1Flags::QC20_20V_ENABLE);
+        }
+        if config.pe20_20v_enabled {
+            config1.insert(FastChargeConfig1Flags::PE20_20V_ENABLE);
+        } else {
+            config1.remove(FastChargeConfig1Flags::PE20_20V_ENABLE);
+        }
+        if config.pd_12v_enabled {
+            config1.remove(FastChargeConfig1Flags::NON_PD_12V_DISABLE);
+        } else {
+            config1.insert(FastChargeConfig1Flags::NON_PD_12V_DISABLE);
+        }
+        self.set_fast_charge_config_1_raw(config1).await?;
+
+        // REG 0xB0: protocol enable/disable bits are active‑low (set = disable)
+        let mut config2 = self.get_fast_charge_config_2_raw().await?;
+        let any_fast = config.qc_enabled
+            || config.fcp_enabled
+            || config.afc_enabled
+            || config.scp_enabled
+            || config.pe20_enabled
+            || config.sfcp_enabled;
+        if any_fast {
+            config2.remove(FastChargeConfig2Flags::FAST_CHARGE_DISABLE);
+        } else {
+            config2.insert(FastChargeConfig2Flags::FAST_CHARGE_DISABLE);
+        }
+
+        if config.qc_enabled {
+            config2.remove(FastChargeConfig2Flags::QC2_DISABLE);
+            config2.remove(FastChargeConfig2Flags::QC3_DISABLE);
+        } else {
+            config2.insert(FastChargeConfig2Flags::QC2_DISABLE);
+            config2.insert(FastChargeConfig2Flags::QC3_DISABLE);
+        }
+
+        if config.scp_enabled {
+            config2.remove(FastChargeConfig2Flags::SCP_HV_DISABLE);
+            config2.remove(FastChargeConfig2Flags::SCP_LV_DISABLE);
+        } else {
+            config2.insert(FastChargeConfig2Flags::SCP_HV_DISABLE);
+            config2.insert(FastChargeConfig2Flags::SCP_LV_DISABLE);
+        }
+
+        if config.bc12_enabled {
+            config2.remove(FastChargeConfig2Flags::BC12_DISABLE);
+        } else {
+            config2.insert(FastChargeConfig2Flags::BC12_DISABLE);
+        }
+        self.set_fast_charge_config_2_raw(config2).await?;
+
+        // REG 0xB1: protocol disable bits (0=enable, 1=disable)
+        let mut config3 = self.get_fast_charge_config_3_raw().await?;
+        if config.fcp_enabled {
+            config3.remove(FastChargeConfig3Flags::FCP_DISABLE);
+        } else {
+            config3.insert(FastChargeConfig3Flags::FCP_DISABLE);
+        }
+        if config.afc_enabled {
+            config3.remove(FastChargeConfig3Flags::AFC_DISABLE);
+        } else {
+            config3.insert(FastChargeConfig3Flags::AFC_DISABLE);
+        }
+        if config.pe20_enabled {
+            config3.remove(FastChargeConfig3Flags::PE_DISABLE);
+        } else {
+            config3.insert(FastChargeConfig3Flags::PE_DISABLE);
+        }
+        if config.sfcp_enabled {
+            config3.remove(FastChargeConfig3Flags::SFCP_DISABLE);
+        } else {
+            config3.insert(FastChargeConfig3Flags::SFCP_DISABLE);
+        }
+        self.set_fast_charge_config_3_raw(config3).await?;
+
+        // REG 0xB2: SCP broadcast current (bits 5-4)
+        let mut config4 = self.get_fast_charge_config_4_raw().await?;
+        let raw = (config4.bits() & !FastChargeConfig4Flags::SCP_CURRENT_MASK.bits())
+            | ((config.scp_current_limit & 0x03) << 4);
+        config4 = FastChargeConfig4Flags::from_bits_truncate(raw);
+        self.set_fast_charge_config_4_raw(config4).await?;
+
+        Ok(())
+    }
+
+    /// Get current fast charging configuration from registers (decoded).
+    pub async fn get_fast_charge_status(
+        &mut self,
+    ) -> Result<FastChargeConfiguration, Error<I2C::Error>> {
+        let config0 = self.get_fast_charge_config_0_raw().await?;
+        let config1 = self.get_fast_charge_config_1_raw().await?;
+        let config2 = self.get_fast_charge_config_2_raw().await?;
+        let config3 = self.get_fast_charge_config_3_raw().await?;
+        let config4 = self.get_fast_charge_config_4_raw().await?;
+
+        let fast_ok = !config2.contains(FastChargeConfig2Flags::FAST_CHARGE_DISABLE);
+        let qc2_ok = fast_ok && !config2.contains(FastChargeConfig2Flags::QC2_DISABLE);
+        let qc3_ok = fast_ok && !config2.contains(FastChargeConfig2Flags::QC3_DISABLE);
+
+        Ok(FastChargeConfiguration {
+            qc_enabled: qc2_ok || qc3_ok,
+            fcp_enabled: !config3.contains(FastChargeConfig3Flags::FCP_DISABLE),
+            afc_enabled: !config3.contains(FastChargeConfig3Flags::AFC_DISABLE),
+            scp_enabled: !config2.contains(FastChargeConfig2Flags::SCP_HV_DISABLE)
+                || !config2.contains(FastChargeConfig2Flags::SCP_LV_DISABLE),
+            pe20_enabled: !config3.contains(FastChargeConfig3Flags::PE_DISABLE),
+            sfcp_enabled: !config3.contains(FastChargeConfig3Flags::SFCP_DISABLE),
+            bc12_enabled: !config2.contains(FastChargeConfig2Flags::BC12_DISABLE),
+            scp_current_limit: ((config4.bits() & FastChargeConfig4Flags::SCP_CURRENT_MASK.bits())
+                >> 4) as u8,
+            fcp_afc_sfcp_2_25a: config0.contains(FastChargeConfig0Flags::FCP_AFC_SFCP_2_25A),
+            qc20_20v_enabled: config1.contains(FastChargeConfig1Flags::QC20_20V_ENABLE),
+            qc30_20v_enabled: !config1.contains(FastChargeConfig1Flags::QC30_20V_DISABLE),
+            pe20_20v_enabled: config1.contains(FastChargeConfig1Flags::PE20_20V_ENABLE),
+            pd_12v_enabled: !config1.contains(FastChargeConfig1Flags::NON_PD_12V_DISABLE),
+        })
     }
 
     /// Configure PD protocol with detailed settings.
