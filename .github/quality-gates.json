@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "policy": {
+    "baseline_policy": "explicit-waiver-required",
+    "require_signed_commits": true,
+    "branch_protection": {
+      "protected_branches": [
+        "main"
+      ],
+      "require_pull_request": true,
+      "disallow_direct_pushes": true
+    },
+    "review_policy": {
+      "mode": "conditional-required",
+      "required_approvals": 1,
+      "exempt_repository_owner": true,
+      "exempt_author_permissions": [
+        "admin",
+        "maintain"
+      ],
+      "allowed_reviewer_permissions": [
+        "write",
+        "maintain",
+        "admin"
+      ],
+      "enforcement": {
+        "mode": "github-native",
+        "bypass_mode": "pull-request-only"
+      }
+    }
+  },
+  "required_checks": [
+    "Build"
+  ],
+  "informational_checks": [],
+  "waivers": [],
+  "expected_pr_workflows": [
+    {
+      "workflow": "Build",
+      "jobs": [
+        "Build"
+      ]
+    }
+  ]
+}
