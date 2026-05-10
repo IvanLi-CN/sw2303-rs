@@ -8,14 +8,15 @@
 use embedded_hal::i2c::{ErrorKind, ErrorType, I2c, Operation};
 use std::collections::HashMap;
 use sw2303::{
-    PdConfiguration, ProtocolConfiguration, ProtocolType, SW2303, TypeCConfiguration,
-    registers::constants::DEFAULT_ADDRESS,
+    PdConfiguration, PpsConfigMode, ProtocolConfiguration, ProtocolType, SW2303,
+    TypeCConfiguration, registers::constants::DEFAULT_ADDRESS,
 };
 
 /// Mock I2C implementation for testing
 #[derive(Debug, Default)]
 struct MockI2c {
     registers: HashMap<u8, u8>,
+    current_register: Option<u8>,
     write_enabled: bool,
 }
 
@@ -23,6 +24,7 @@ impl MockI2c {
     fn new() -> Self {
         Self {
             registers: HashMap::new(),
+            current_register: None,
             write_enabled: false,
         }
     }
@@ -44,14 +46,18 @@ impl ErrorType for MockI2c {
 impl I2c for MockI2c {
     fn read(&mut self, _address: u8, buffer: &mut [u8]) -> Result<(), Self::Error> {
         if buffer.len() == 1 {
-            // Single register read - this is actually a write_read operation
-            Ok(())
-        } else {
-            Ok(())
+            let reg = self.current_register.unwrap_or(0);
+            buffer[0] = self.get_register(reg);
         }
+        Ok(())
     }
 
     fn write(&mut self, _address: u8, bytes: &[u8]) -> Result<(), Self::Error> {
+        if bytes.len() == 1 {
+            self.current_register = Some(bytes[0]);
+            return Ok(());
+        }
+
         if bytes.len() == 2 {
             let reg = bytes[0];
             let value = bytes[1];
@@ -148,6 +154,7 @@ fn test_pd_configuration() {
         dr_swap: false,
         emarker_enabled: true,
         pps_enabled: true,
+        pps_config_mode: PpsConfigMode::Auto,
         fixed_voltages: [true, true, false, false], // 9V, 12V enabled
         emark_5a_bypass: false,
         emarker_60_70w: true,
@@ -155,6 +162,11 @@ fn test_pd_configuration() {
 
     let result = sw2303.configure_pd(pd_config);
     assert!(result.is_ok());
+
+    let pd_cfg1 = sw2303.get_pd_config_1_raw().unwrap();
+    let pd_cfg2 = sw2303.get_pd_config_2_raw().unwrap();
+    assert_eq!(pd_cfg1.bits() & 0x80, 0x00); // PPS register-config must stay in auto mode.
+    assert_eq!(pd_cfg2.bits() & 0xF0, 0x00); // PPS0/1/2/3 all enabled (active-low disable bits).
 
     // emark_5a_bypass=false should keep the seeded reserved bits intact.
     let pd_cfg3 = sw2303.get_pd_config_3_raw().unwrap();
@@ -167,6 +179,7 @@ fn test_pd_configuration() {
         dr_swap: false,
         emarker_enabled: true,
         pps_enabled: true,
+        pps_config_mode: PpsConfigMode::Auto,
         fixed_voltages: [true, true, false, false],
         emark_5a_bypass: true,
         emarker_60_70w: true,
@@ -175,6 +188,39 @@ fn test_pd_configuration() {
     assert!(result.is_ok());
     let pd_cfg3 = sw2303.get_pd_config_3_raw().unwrap();
     assert_eq!(pd_cfg3.bits(), 0xF0);
+}
+
+#[test]
+fn test_pd_capability_status_reports_high_voltage_pps() {
+    let mut i2c = MockI2c::new();
+    i2c.set_register(0xA6, 0xB0);
+    let mut sw2303 = SW2303::new(&mut i2c, DEFAULT_ADDRESS);
+
+    sw2303.init().unwrap();
+    sw2303.unlock_write_enable_0().unwrap();
+
+    sw2303
+        .configure_pd(PdConfiguration {
+            enabled: true,
+            vconn_swap: true,
+            dr_swap: false,
+            emarker_enabled: true,
+            pps_enabled: true,
+            pps_config_mode: PpsConfigMode::Auto,
+            fixed_voltages: [true, true, true, true],
+            emark_5a_bypass: false,
+            emarker_60_70w: true,
+        })
+        .unwrap();
+
+    let status = sw2303.get_pd_capability_status().unwrap();
+    assert!(status.enabled);
+    assert_eq!(status.pps_config_mode, PpsConfigMode::Auto);
+    assert_eq!(status.fixed_voltages, [true, true, true, true]);
+    assert_eq!(status.pps_ranges, [true, true, true, true]);
+    assert_eq!(status.pps3_current_limit_ma, 5_000);
+    assert!(status.supports_pps_above_11v());
+    assert_eq!(status.max_pps_voltage_mv(), Some(21_000));
 }
 
 #[test]
@@ -195,6 +241,64 @@ fn test_type_c_configuration() {
 
     let result = sw2303.configure_type_c(type_c_config);
     assert!(result.is_ok());
+}
+
+#[test]
+fn test_configure_protocols_clears_global_fast_charge_disable_for_non_qc_modes() {
+    let mut i2c = MockI2c::new();
+    i2c.set_register(0xB0, 0xFF);
+    let mut sw2303 = SW2303::new(&mut i2c, DEFAULT_ADDRESS);
+
+    sw2303.init().unwrap();
+    sw2303.unlock_write_enable_0().unwrap();
+
+    sw2303
+        .configure_protocols(ProtocolConfiguration {
+            pd_enabled: false,
+            qc20_enabled: false,
+            qc30_enabled: false,
+            fcp_enabled: true,
+            afc_enabled: false,
+            scp_enabled: false,
+            pe20_enabled: false,
+            bc12_enabled: false,
+            sfcp_enabled: false,
+        })
+        .unwrap();
+
+    let cfg2 = sw2303.get_fast_charge_config_2_raw().unwrap();
+    assert!(!cfg2.contains(sw2303::registers::FastChargeConfig2Flags::FAST_CHARGE_DISABLE));
+    assert_eq!(sw2303.get_protocol_status().unwrap().fcp_enabled, true);
+}
+
+#[test]
+fn test_protocol_status_reports_qc2_and_qc3_independently() {
+    let mut i2c = MockI2c::new();
+    i2c.set_register(0xB0, 0x00);
+    let mut sw2303 = SW2303::new(&mut i2c, DEFAULT_ADDRESS);
+
+    sw2303.init().unwrap();
+    sw2303.unlock_write_enable_0().unwrap();
+
+    sw2303
+        .configure_protocols(ProtocolConfiguration {
+            pd_enabled: false,
+            qc20_enabled: true,
+            qc30_enabled: false,
+            fcp_enabled: false,
+            afc_enabled: false,
+            scp_enabled: false,
+            pe20_enabled: false,
+            bc12_enabled: false,
+            sfcp_enabled: false,
+        })
+        .unwrap();
+
+    let status = sw2303.get_protocol_status().unwrap();
+    assert!(status.qc20_enabled);
+    assert!(!status.qc30_enabled);
+    assert!(sw2303.is_protocol_enabled(ProtocolType::QC20).unwrap());
+    assert!(!sw2303.is_protocol_enabled(ProtocolType::QC30).unwrap());
 }
 
 #[test]

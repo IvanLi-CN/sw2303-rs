@@ -43,7 +43,10 @@
 //! ### Synchronous Version
 //!
 //! ```rust,no_run
-//! use sw2303::{SW2303, ProtocolConfiguration, PdConfiguration, registers::constants::DEFAULT_ADDRESS};
+//! use sw2303::{
+//!     PdConfiguration, PpsConfigMode, ProtocolConfiguration, SW2303,
+//!     registers::constants::DEFAULT_ADDRESS,
+//! };
 //! use embedded_hal::i2c::I2c;
 //!
 //! # #[cfg(not(feature = "async"))]
@@ -73,6 +76,7 @@
 //!     enabled: true,
 //!     fixed_voltages: [true, true, false, false], // Enable 9V and 12V
 //!     pps_enabled: true,
+//!     pps_config_mode: PpsConfigMode::Auto,
 //!     ..Default::default()
 //! };
 //! sw2303.configure_pd(pd_config)?;

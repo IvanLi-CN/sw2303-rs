@@ -222,6 +222,21 @@ pub struct ProtocolConfiguration {
 
 // Default derived above
 
+/// PPS advertisement source-selection mode.
+///
+/// `Auto` keeps the SW2303's built-in PPS profile selection logic.
+/// `Register` tells the chip to source PPS advertisement from register-backed
+/// configuration instead.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub enum PpsConfigMode {
+    /// Let SW2303 choose PPS advertisement automatically.
+    #[default]
+    Auto,
+    /// Use register-backed PPS profile configuration.
+    Register,
+}
+
 /// PD-specific configuration for SW2303.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
@@ -236,6 +251,11 @@ pub struct PdConfiguration {
     pub emarker_enabled: bool,
     /// Whether PPS (Programmable Power Supply) is enabled
     pub pps_enabled: bool,
+    /// How PPS advertisement is sourced.
+    ///
+    /// This controls REG `0xB4` bit 7 (`0 = auto`, `1 = register config`) and
+    /// is intentionally separate from `pps_enabled`.
+    pub pps_config_mode: PpsConfigMode,
     /// Fixed voltage levels to enable (9V, 12V, 15V, 20V)
     /// Each bit represents: [9V, 12V, 15V, 20V]
     pub fixed_voltages: [bool; 4],
@@ -253,10 +273,68 @@ impl Default for PdConfiguration {
             dr_swap: false,
             emarker_enabled: false,
             pps_enabled: false,
+            pps_config_mode: PpsConfigMode::Auto,
             fixed_voltages: [false; 4], // All voltages disabled by default
             emark_5a_bypass: false,
             emarker_60_70w: false,
         }
+    }
+}
+
+/// Structured PD capability snapshot decoded from SW2303 PD configuration
+/// registers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct PdCapabilityStatus {
+    /// Whether PD protocol is enabled.
+    pub enabled: bool,
+    /// Whether VCONN swap is supported.
+    pub vconn_swap: bool,
+    /// Whether data-role swap is supported.
+    pub dr_swap: bool,
+    /// Whether emarker detection is enabled.
+    pub emarker_enabled: bool,
+    /// Whether 60-70W operation bypasses emarker requirement.
+    pub emarker_60_70w: bool,
+    /// Whether any PPS range is enabled.
+    pub pps_enabled: bool,
+    /// Whether PPS advertisement is auto-generated or register-backed.
+    pub pps_config_mode: PpsConfigMode,
+    /// Advertised fixed-voltage PDOs [9V, 12V, 15V, 20V].
+    pub fixed_voltages: [bool; 4],
+    /// Advertised PPS ranges [3.3-5.9V, 3.3-11V, 3.3-16V, 3.3-21V].
+    pub pps_ranges: [bool; 4],
+    /// PPS3 current limit in milliamps.
+    pub pps3_current_limit_ma: u16,
+    /// Whether Discovery Identity command support is enabled.
+    pub discovery_identity_enabled: bool,
+    /// Whether Discovery SVID command support is enabled.
+    pub discovery_svid_enabled: bool,
+    /// Raw peak-current setting from REG 0xB4 bits 1-0.
+    pub peak_current_setting: u8,
+    /// Whether PD 5A emarker check is bypassed.
+    pub emark_5a_bypass: bool,
+}
+
+impl PdCapabilityStatus {
+    /// Returns the highest enabled PPS voltage in millivolts.
+    pub const fn max_pps_voltage_mv(&self) -> Option<u16> {
+        if self.pps_ranges[3] {
+            Some(21_000)
+        } else if self.pps_ranges[2] {
+            Some(16_000)
+        } else if self.pps_ranges[1] {
+            Some(11_000)
+        } else if self.pps_ranges[0] {
+            Some(5_900)
+        } else {
+            None
+        }
+    }
+
+    /// Returns true when PPS advertisement should include ranges above 11V.
+    pub const fn supports_pps_above_11v(&self) -> bool {
+        self.pps_ranges[2] || self.pps_ranges[3]
     }
 }
 
