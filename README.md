@@ -72,7 +72,7 @@ where I2C::Error: core::fmt::Debug
 ### Protocol Configuration
 
 ```rust
-use sw2303::{SW2303, ProtocolConfiguration, PdConfiguration, TypeCConfiguration, ProtocolType, registers::constants::DEFAULT_ADDRESS};
+use sw2303::{SW2303, ProtocolConfiguration, PdConfiguration, PpsConfigMode, TypeCConfiguration, ProtocolType, registers::constants::DEFAULT_ADDRESS};
 use embedded_hal::i2c::I2c;
 
 #[cfg(not(feature = "async"))]
@@ -106,6 +106,7 @@ where I2C::Error: core::fmt::Debug
         dr_swap: false,
         emarker_enabled: true,
         pps_enabled: true,
+        pps_config_mode: PpsConfigMode::Auto,
         fixed_voltages: [true, true, true, false], // Enable 9V, 12V, 15V
         emark_5a_bypass: false,
         emarker_60_70w: true,
