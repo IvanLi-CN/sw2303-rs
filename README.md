@@ -221,6 +221,10 @@ where I2C::Error: core::fmt::Debug
 - `async`: Enables async/await support for non-blocking operations
 - `defmt`: Enables structured logging with defmt
 
+## Maintainer Quality Gates
+
+Changes to `main` must go through a pull request with the `Build` GitHub check passing. The repository-local quality gate contract is recorded in `.github/quality-gates.json`; GitHub branch protection should require the same `Build` check and block direct pushes to `main`, including release version updates.
+
 ## Hardware Support
 
 This driver is designed for the SW2303 USB PD controller. The SW2303 is a USB PD controller that supports:

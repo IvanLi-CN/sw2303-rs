@@ -4,30 +4,40 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "major/minor/patch or semver"
+        description: "Expected Cargo.toml version"
         required: false
-        default: "patch"
 
 concurrency: release-crate
+
+permissions:
+  contents: write
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Set git credentials
+      - name: Verify requested version
+        id: crate
+        env:
+          EXPECTED_VERSION: ${{ github.event.inputs.version }}
         run: |
-          git config user.name github-actions
-          git config user.email github-actions@github.com
-      - name: Crates publish
-        uses: kaleidawave/crates-release-gh-action@main
-        id: release
-        with:
-          version: ${{ github.event.inputs.version }}
-          crates-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-      - name: Push updated Cargo.toml
+          actual="$(
+            cargo metadata --no-deps --format-version 1 \
+              | python3 -c 'import json,sys; print(json.load(sys.stdin)["packages"][0]["version"])'
+          )"
+          if [ -n "${EXPECTED_VERSION}" ] && [ "${EXPECTED_VERSION}" != "${actual}" ]; then
+            echo "Expected version ${EXPECTED_VERSION}, but Cargo.toml declares ${actual}." >&2
+            exit 1
+          fi
+          echo "version=${actual}" >> "${GITHUB_OUTPUT}"
+      - name: Publish crate
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish --locked
+      - name: Push release tag
+        env:
+          version: ${{ steps.crate.outputs.version }}
         run: |
-          git add .
-          git commit -m "Release: ${{ steps.release.outputs.new-versions-description }}"
-          git tag "release/${{ steps.release.outputs.new-version }}"
-          git push --tags origin main
+          git tag "release/${version}"
+          git push origin "release/${version}"
