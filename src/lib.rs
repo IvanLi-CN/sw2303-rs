@@ -44,7 +44,7 @@
 //!
 //! ```rust,no_run
 //! use sw2303::{
-//!     PdConfiguration, PpsConfigMode, ProtocolConfiguration, SW2303,
+//!     PdConfiguration, Pps3CurrentLimit, PpsConfigMode, ProtocolConfiguration, SW2303,
 //!     registers::constants::DEFAULT_ADDRESS,
 //! };
 //! use embedded_hal::i2c::I2c;
@@ -80,6 +80,7 @@
 //!     ..Default::default()
 //! };
 //! sw2303.configure_pd(pd_config)?;
+//! sw2303.set_pps3_current_limit(Pps3CurrentLimit::I3A)?;
 //!
 //! // Check if a sink device is connected
 //! if sw2303.is_sink_device_connected()? {

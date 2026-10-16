@@ -237,6 +237,26 @@ pub enum PpsConfigMode {
     Register,
 }
 
+/// PPS3 current limit values configured via REG 0xB4 bit 6.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub enum Pps3CurrentLimit {
+    /// 3.0A current limit.
+    I3A,
+    /// 5.0A current limit.
+    I5A,
+}
+
+impl Pps3CurrentLimit {
+    /// Return the configured current limit in milliamps.
+    pub const fn milliamps(self) -> u16 {
+        match self {
+            Self::I3A => 3_000,
+            Self::I5A => 5_000,
+        }
+    }
+}
+
 /// PD-specific configuration for SW2303.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]

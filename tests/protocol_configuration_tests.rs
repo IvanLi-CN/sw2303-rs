@@ -8,8 +8,9 @@
 use embedded_hal::i2c::{ErrorKind, ErrorType, I2c, Operation};
 use std::collections::HashMap;
 use sw2303::{
-    PdConfiguration, PpsConfigMode, ProtocolConfiguration, ProtocolType, SW2303,
-    TypeCConfiguration, registers::constants::DEFAULT_ADDRESS,
+    PdConfiguration, Pps3CurrentLimit, PpsConfigMode, ProtocolConfiguration, ProtocolType, SW2303,
+    TypeCConfiguration, error::Error, registers::PdConfig1Flags,
+    registers::constants::DEFAULT_ADDRESS,
 };
 
 /// Mock I2C implementation for testing
@@ -18,6 +19,8 @@ struct MockI2c {
     registers: HashMap<u8, u8>,
     current_register: Option<u8>,
     write_enabled: bool,
+    fail_reads: bool,
+    fail_data_writes: bool,
 }
 
 impl MockI2c {
@@ -26,6 +29,8 @@ impl MockI2c {
             registers: HashMap::new(),
             current_register: None,
             write_enabled: false,
+            fail_reads: false,
+            fail_data_writes: false,
         }
     }
 
@@ -37,6 +42,20 @@ impl MockI2c {
     fn get_register(&self, reg: u8) -> u8 {
         self.registers.get(&reg).copied().unwrap_or(0)
     }
+
+    fn with_read_error() -> Self {
+        Self {
+            fail_reads: true,
+            ..Self::new()
+        }
+    }
+
+    fn with_data_write_error() -> Self {
+        Self {
+            fail_data_writes: true,
+            ..Self::new()
+        }
+    }
 }
 
 impl ErrorType for MockI2c {
@@ -45,6 +64,9 @@ impl ErrorType for MockI2c {
 
 impl I2c for MockI2c {
     fn read(&mut self, _address: u8, buffer: &mut [u8]) -> Result<(), Self::Error> {
+        if self.fail_reads {
+            return Err(ErrorKind::Other);
+        }
         if buffer.len() == 1 {
             let reg = self.current_register.unwrap_or(0);
             buffer[0] = self.get_register(reg);
@@ -61,6 +83,10 @@ impl I2c for MockI2c {
         if bytes.len() == 2 {
             let reg = bytes[0];
             let value = bytes[1];
+
+            if self.fail_data_writes {
+                return Err(ErrorKind::Other);
+            }
 
             // Simulate unlock mechanism - check for writes to REG 0x12 with unlock values
             if reg == 0x12 && (value == 0x20 || value == 0x40 || value == 0x80) {
@@ -188,6 +214,60 @@ fn test_pd_configuration() {
     assert!(result.is_ok());
     let pd_cfg3 = sw2303.get_pd_config_3_raw().unwrap();
     assert_eq!(pd_cfg3.bits(), 0xF0);
+}
+
+#[test]
+fn test_pps3_current_limit_switches_both_ways_and_preserves_other_bits() {
+    let mut i2c = MockI2c::new();
+    let initial_config1 = 0xBF; // All defined bits except PPS3_3A_LIMIT.
+    i2c.set_register(0xB4, initial_config1);
+    let mut sw2303 = SW2303::new(&mut i2c, DEFAULT_ADDRESS);
+
+    sw2303.unlock_write_enable_0().unwrap();
+    assert_eq!(
+        sw2303.get_pps3_current_limit().unwrap(),
+        Pps3CurrentLimit::I5A
+    );
+
+    sw2303
+        .set_pps3_current_limit(Pps3CurrentLimit::I3A)
+        .unwrap();
+    assert_eq!(
+        sw2303.get_pps3_current_limit().unwrap(),
+        Pps3CurrentLimit::I3A
+    );
+    let after_3a = sw2303.get_pd_config_1_raw().unwrap().bits();
+    assert_eq!(
+        after_3a & !PdConfig1Flags::PPS3_3A_LIMIT.bits(),
+        initial_config1 & !PdConfig1Flags::PPS3_3A_LIMIT.bits()
+    );
+
+    sw2303
+        .set_pps3_current_limit(Pps3CurrentLimit::I5A)
+        .unwrap();
+    assert_eq!(
+        sw2303.get_pps3_current_limit().unwrap(),
+        Pps3CurrentLimit::I5A
+    );
+    let after_5a = sw2303.get_pd_config_1_raw().unwrap().bits();
+    assert_eq!(after_5a, initial_config1);
+}
+
+#[test]
+fn test_pps3_current_limit_propagates_i2c_errors() {
+    let mut read_fail_i2c = MockI2c::with_read_error();
+    let mut read_fail_driver = SW2303::new(&mut read_fail_i2c, DEFAULT_ADDRESS);
+    assert!(matches!(
+        read_fail_driver.get_pps3_current_limit(),
+        Err(Error::I2c(ErrorKind::Other))
+    ));
+
+    let mut write_fail_i2c = MockI2c::with_data_write_error();
+    let mut write_fail_driver = SW2303::new(&mut write_fail_i2c, DEFAULT_ADDRESS);
+    assert!(matches!(
+        write_fail_driver.set_pps3_current_limit(Pps3CurrentLimit::I3A),
+        Err(Error::I2c(ErrorKind::Other))
+    ));
 }
 
 #[test]
