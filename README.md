@@ -29,13 +29,13 @@ Add this to your `Cargo.toml`:
 sw2303 = "0.1.0"
 
 # For async support
-sw2303 = { version = "0.1.0", features = ["async"] }
+sw2303 = { version = "0.0.2", features = ["async"] }
 
 # For defmt logging support
-sw2303 = { version = "0.1.0", features = ["defmt"] }
+sw2303 = { version = "0.0.2", features = ["defmt"] }
 
 # For both async and defmt
-sw2303 = { version = "0.1.0", features = ["async", "defmt"] }
+sw2303 = { version = "0.0.2", features = ["async", "defmt"] }
 ```
 
 ## Usage
