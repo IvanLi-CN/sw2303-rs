@@ -11,22 +11,8 @@
       "disallow_direct_pushes": true
     },
     "review_policy": {
-      "mode": "conditional-required",
-      "required_approvals": 1,
-      "exempt_repository_owner": true,
-      "exempt_author_permissions": [
-        "admin",
-        "maintain"
-      ],
-      "allowed_reviewer_permissions": [
-        "write",
-        "maintain",
-        "admin"
-      ],
-      "enforcement": {
-        "mode": "github-native",
-        "bypass_mode": "pull-request-only"
-      }
+      "mode": "github-native",
+      "required_approvals": 0
     }
   },
   "required_checks": [

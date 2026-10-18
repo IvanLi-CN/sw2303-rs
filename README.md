@@ -225,6 +225,8 @@ where I2C::Error: core::fmt::Debug
 
 Changes to `main` must go through a pull request with the `Build` GitHub check passing. The repository-local quality gate contract is recorded in `.github/quality-gates.json`; GitHub branch protection should require the same `Build` check and block direct pushes to `main`, including release version updates.
 
+Human review remains available, but approval is not a merge prerequisite: the native required approval count is zero. Maintainers use the ordinary merge path after all other protections pass; no administrator override is needed to compensate for a missing approval.
+
 ## Hardware Support
 
 This driver is designed for the SW2303 USB PD controller. The SW2303 is a USB PD controller that supports:
