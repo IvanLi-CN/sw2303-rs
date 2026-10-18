@@ -24,12 +24,12 @@ The default branch accepted PR #1 because GitHub reported no branch protection f
 
 ## Verification
 
-- VER-001: Parse `.github/quality-gates.json` and validate it with the style-playbook quality gate checker when available.
-- VER-002: Inspect live GitHub rules for `main`: PRs, signed commits, and the strict `Build` check are required; force pushes remain blocked.
-- VER-003: A PR changing the repository shows `Build` passing before merge.
-- VER-004: GitHub's required approving review count is zero and matches the repository declaration. The rule update preserves all unrelated parameters.
-- VER-005: The README points maintainers to the repo-local quality gate contract and documents optional human review.
-- VER-006: The release workflow publishes from the signed version already present on `main` and does not create protected-branch commits.
+- VER-001 (covers: REQ-004, REQ-008): Parse `.github/quality-gates.json` and validate it with the style-playbook quality gate checker when available.
+- VER-002 (covers: REQ-001, REQ-002, REQ-004, REQ-006): Inspect live GitHub rules for `main`: PRs, signed commits, and the strict `Build` check are required; force pushes remain blocked.
+- VER-003 (covers: REQ-004, REQ-005): A PR changing the repository shows `Build` passing before merge. Inspect the workflow's PR, main, and merge-group triggers.
+- VER-004 (covers: REQ-003, REQ-008): GitHub's required approving review count is zero and matches the repository declaration. The rule update preserves all unrelated parameters.
+- VER-005 (covers: REQ-003, REQ-004): The README points maintainers to the repo-local quality gate contract and documents optional human review.
+- VER-006 (covers: REQ-007): The release workflow publishes from the signed version already present on `main` and does not create protected-branch commits.
 
 ## Related ADRs
 
