@@ -72,7 +72,7 @@ where I2C::Error: core::fmt::Debug
 ### Protocol Configuration
 
 ```rust
-use sw2303::{SW2303, ProtocolConfiguration, PdConfiguration, PpsConfigMode, TypeCConfiguration, ProtocolType, registers::constants::DEFAULT_ADDRESS};
+use sw2303::{SW2303, ProtocolConfiguration, PdConfiguration, Pps3CurrentLimit, PpsConfigMode, TypeCConfiguration, ProtocolType, registers::constants::DEFAULT_ADDRESS};
 use embedded_hal::i2c::I2c;
 
 #[cfg(not(feature = "async"))]
@@ -112,6 +112,9 @@ where I2C::Error: core::fmt::Debug
         emarker_60_70w: true,
     };
     sw2303.configure_pd(pd_config)?;
+
+    // Configure the PPS3 current limit without manipulating REG 0xB4 directly.
+    sw2303.set_pps3_current_limit(Pps3CurrentLimit::I3A)?;
 
     // Configure Type-C current broadcast
     let type_c_config = TypeCConfiguration {

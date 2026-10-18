@@ -4,8 +4,8 @@
 //! This driver provides methods to interact with the SW2303 for UFP detection and charging management.
 
 use crate::data_types::{
-    FastChargeConfiguration, PdCapabilityStatus, PdConfiguration, PowerRequest, PpsConfigMode,
-    ProtocolConfiguration, ProtocolType, TypeCConfiguration,
+    FastChargeConfiguration, PdCapabilityStatus, PdConfiguration, PowerRequest, Pps3CurrentLimit,
+    PpsConfigMode, ProtocolConfiguration, ProtocolType, TypeCConfiguration,
 };
 use crate::error::Error;
 use crate::registers::{
@@ -652,6 +652,32 @@ where
     pub async fn get_pd_config_1_raw(&mut self) -> Result<PdConfig1Flags, Error<I2C::Error>> {
         let value = self.read_register(Register::PdConfig1).await?;
         Ok(PdConfig1Flags::from_bits_truncate(value))
+    }
+
+    /// Set the PPS3 current limit (REG 0xB4 bit 6).
+    ///
+    /// This method preserves every other bit in the register. Requires
+    /// `unlock_write_enable_0()` to be called first.
+    pub async fn set_pps3_current_limit(
+        &mut self,
+        limit: Pps3CurrentLimit,
+    ) -> Result<(), Error<I2C::Error>> {
+        let mut config1 = self.get_pd_config_1_raw().await?;
+        match limit {
+            Pps3CurrentLimit::I3A => config1.insert(PdConfig1Flags::PPS3_3A_LIMIT),
+            Pps3CurrentLimit::I5A => config1.remove(PdConfig1Flags::PPS3_3A_LIMIT),
+        }
+        self.set_pd_config_1_raw(config1).await
+    }
+
+    /// Get the PPS3 current limit configured in REG 0xB4 bit 6.
+    pub async fn get_pps3_current_limit(&mut self) -> Result<Pps3CurrentLimit, Error<I2C::Error>> {
+        let config1 = self.get_pd_config_1_raw().await?;
+        Ok(if config1.contains(PdConfig1Flags::PPS3_3A_LIMIT) {
+            Pps3CurrentLimit::I3A
+        } else {
+            Pps3CurrentLimit::I5A
+        })
     }
 
     /// Set PD configuration 2 register (REG 0xB5) raw flags.
