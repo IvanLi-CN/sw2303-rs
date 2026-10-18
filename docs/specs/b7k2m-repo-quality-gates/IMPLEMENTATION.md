@@ -3,6 +3,7 @@
 ## Current Shape
 
 - `.github/quality-gates.json` declares the repo-local gate contract for `main`.
+- Its native review policy requires zero approvals, so optional human review does not block ordinary protected PR merges.
 - `.github/workflows/build.yml` exposes a stable required check named `Build`.
 - `.github/workflows/release.yml` publishes the signed version already present on `main` and pushes only the release tag.
 - `README.md` documents the maintainer-facing quality gate.
@@ -16,3 +17,4 @@
 - Run `cargo clippy --all-targets --all-features -- -D warnings`.
 - Run `cargo test`.
 - Verify GitHub protection state through `gh api` after remote alignment.
+- Confirm that required approvals are zero while `Build`, strict up-to-date checks, signed commits, and the PR-only rule are preserved.
